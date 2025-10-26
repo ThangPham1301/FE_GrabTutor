@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Remove these styles that are affecting the layout */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Remove or modify any other styles that might be affecting the layout */
