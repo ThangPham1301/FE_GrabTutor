@@ -47,21 +47,21 @@ const LoginRole = () => {
             icon={studentIcon}
             description="Have lessons, message your tutor or watch your lessons back" 
             buttonText="Student log in"
-            onClick={() => navigate('/login-student')}
+            onClick={() => navigate('/login', { state: { role: 'STUDENT' } })}
           />
           <LoginCard 
             role="Tutor" 
             icon={tutorIcon}
             description="Give lessons or manage bookings with your customers" 
             buttonText="Tutor log in"
-            onClick={() => navigate('/login-tutor')}
+            onClick={() => navigate('/login', { state: { role: 'TUTOR' } })}
           />
           <LoginCard 
             role="Admin" 
             icon={adminIcon}
             description="Manage payments or lessons for your organization" 
             buttonText="Admin log in"
-            onClick={() => navigate('/login-admin')}
+            onClick={() => navigate('/login', { state: { role: 'ADMIN' } })}
           />
         </div>
       </div>

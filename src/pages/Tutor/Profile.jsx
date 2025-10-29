@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaUser, FaEnvelope, FaPhone, FaCalendar, FaEdit, FaSave, FaTimes, FaSignOutAlt, FaKey, FaShieldAlt, FaClock, FaCheckCircle, FaUserCircle, FaStar, FaBook, FaTrophy } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaCalendar, FaIdCard, FaUniversity, FaGraduationCap, FaBook, FaEdit, FaSave, FaTimes, FaSignOutAlt, FaClock, FaStar, FaCheckCircle, FaUserCircle, FaChartLine, FaKey } from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import userApi from '../../api/userApi';
 
@@ -13,7 +13,11 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     fullName: '',
     phoneNumber: '',
-    dob: ''
+    dob: '',
+    nationalId: '',
+    university: '',
+    highestAcademicDegree: '',
+    major: ''
   });
 
   useEffect(() => {
@@ -39,18 +43,28 @@ export default function Profile() {
       setFormData({
         fullName: fullUserData.fullName || user.fullName || '',
         phoneNumber: fullUserData.phoneNumber || '',
-        dob: fullUserData.dob ? new Date(fullUserData.dob).toISOString().split('T')[0] : ''
+        dob: fullUserData.dob ? new Date(fullUserData.dob).toISOString().split('T')[0] : '',
+        nationalId: fullUserData.nationalId || '',
+        university: fullUserData.university || '',
+        highestAcademicDegree: fullUserData.highestAcademicDegree || '',
+        major: fullUserData.major || ''
       });
       
       setLoading(false);
     } catch (error) {
       console.error('=== fetchFullUserInfo ERROR ===');
       console.error('Error:', error.message);
+      console.error('Status:', error.response?.status);
+      console.error('Response:', error.response?.data);
       
       setFormData({
         fullName: user.fullName || '',
         phoneNumber: user.phoneNumber || '',
-        dob: user.dob ? new Date(user.dob).toISOString().split('T')[0] : ''
+        dob: user.dob ? new Date(user.dob).toISOString().split('T')[0] : '',
+        nationalId: user.nationalId || '',
+        university: user.university || '',
+        highestAcademicDegree: user.highestAcademicDegree || '',
+        major: user.major || ''
       });
       
       setLoading(false);
@@ -65,10 +79,18 @@ export default function Profile() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading profile...</div>
+      </div>
+    );
+  }
+
   const handleLogout = () => {
     try {
       logout();
-      navigate('/login');
+      navigate('/login-role');
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -77,13 +99,33 @@ export default function Profile() {
   const handleSave = async () => {
     try {
       setLoading(true);
-      await userApi.updateProfile(formData);
+      console.log('=== handleSave START ===');
+      console.log('Updating with data:', formData);
+      
+      const updatePayload = {
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        dob: formData.dob,
+        nationalId: formData.nationalId,
+        university: formData.university,
+        highestAcademicDegree: formData.highestAcademicDegree,
+        major: formData.major
+      };
+      
+      const response = await userApi.updateProfile(updatePayload);
+      
+      console.log('=== handleSave SUCCESS ===');
+      console.log('Response:', response);
+      
+      await fetchFullUserInfo();
       setIsEditing(false);
       alert('Profile updated successfully!');
-      await fetchFullUserInfo();
     } catch (error) {
-      console.error('Update error:', error);
-      alert('Error updating profile!');
+      console.error('=== handleSave ERROR ===');
+      console.error('Error:', error.message);
+      console.error('Status:', error.response?.status);
+      console.error('Response:', error.response?.data);
+      alert('Error updating profile: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -107,8 +149,8 @@ export default function Profile() {
                 <FaUserCircle className="text-5xl text-white" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold mb-2">Student Profile</h1>
-                <p className="text-teal-100 text-lg">Manage your account and learning progress</p>
+                <h1 className="text-4xl font-bold mb-2">Tutor Profile</h1>
+                <p className="text-teal-100 text-lg">Manage your professional information</p>
                 <div className="mt-4 flex items-center gap-4">
                   <span className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
                     {user.role}
@@ -165,7 +207,7 @@ export default function Profile() {
           {/* Left Column - Profile Info */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8">Personal Information</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-8">Professional Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Full Name */}
@@ -187,22 +229,6 @@ export default function Profile() {
                       placeholder="Enter your full name"
                     />
                   </div>
-                </div>
-
-                {/* Email (Read-only) */}
-                <div className="relative">
-                  <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
-                    Email
-                  </label>
-                  <div className="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
-                    <input
-                      type="email"
-                      value={user.email}
-                      disabled
-                      className="w-full bg-transparent text-gray-900 font-medium outline-none cursor-not-allowed text-lg"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                 </div>
 
                 {/* Phone Number */}
@@ -246,6 +272,106 @@ export default function Profile() {
                   </div>
                 </div>
 
+                {/* National ID */}
+                <div className="relative">
+                  <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
+                    National ID / Passport
+                  </label>
+                  <div className={`border-2 rounded-xl p-4 transition-all duration-300 ${
+                    isEditing 
+                      ? 'border-[#03ccba] bg-gradient-to-br from-teal-50 to-cyan-50 shadow-md' 
+                      : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <input
+                      type="text"
+                      value={formData.nationalId}
+                      onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
+                      disabled={!isEditing}
+                      className="w-full bg-transparent text-gray-900 font-medium outline-none disabled:cursor-not-allowed text-lg"
+                      placeholder="Enter your ID"
+                    />
+                  </div>
+                </div>
+
+                {/* University */}
+                <div className="relative">
+                  <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
+                    University
+                  </label>
+                  <div className={`border-2 rounded-xl p-4 transition-all duration-300 ${
+                    isEditing 
+                      ? 'border-[#03ccba] bg-gradient-to-br from-teal-50 to-cyan-50 shadow-md' 
+                      : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <input
+                      type="text"
+                      value={formData.university}
+                      onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                      disabled={!isEditing}
+                      className="w-full bg-transparent text-gray-900 font-medium outline-none disabled:cursor-not-allowed text-lg"
+                      placeholder="Enter your university"
+                    />
+                  </div>
+                </div>
+
+                {/* Major */}
+                <div className="relative">
+                  <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
+                    Major / Specialization
+                  </label>
+                  <div className={`border-2 rounded-xl p-4 transition-all duration-300 ${
+                    isEditing 
+                      ? 'border-[#03ccba] bg-gradient-to-br from-teal-50 to-cyan-50 shadow-md' 
+                      : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <input
+                      type="text"
+                      value={formData.major}
+                      onChange={(e) => setFormData({ ...formData, major: e.target.value })}
+                      disabled={!isEditing}
+                      className="w-full bg-transparent text-gray-900 font-medium outline-none disabled:cursor-not-allowed text-lg"
+                      placeholder="Enter your major"
+                    />
+                  </div>
+                </div>
+
+                {/* Degree */}
+                <div className="relative">
+                  <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
+                    Highest Academic Degree
+                  </label>
+                  <div className={`border-2 rounded-xl p-4 transition-all duration-300 ${
+                    isEditing 
+                      ? 'border-[#03ccba] bg-gradient-to-br from-teal-50 to-cyan-50 shadow-md' 
+                      : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <input
+                      type="text"
+                      value={formData.highestAcademicDegree}
+                      onChange={(e) => setFormData({ ...formData, highestAcademicDegree: e.target.value })}
+                      disabled={!isEditing}
+                      className="w-full bg-transparent text-gray-900 font-medium outline-none disabled:cursor-not-allowed text-lg"
+                      placeholder="e.g., Bachelor, Master, PhD"
+                    />
+                  </div>
+                </div>
+
+                {/* Email (Read-only) */}
+                <div className="relative">
+                  <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
+                    Email
+                  </label>
+                  <div className="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <input
+                      type="email"
+                      value={user.email}
+                      disabled
+                      className="w-full bg-transparent text-gray-900 font-medium outline-none cursor-not-allowed text-lg"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                </div>
+
                 {/* Role (Read-only) */}
                 <div className="relative">
                   <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
@@ -277,7 +403,7 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Right Column - Quick Actions & Stats */}
+          {/* Right Column - Quick Actions */}
           <div className="space-y-6">
             {/* Quick Actions */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -295,130 +421,16 @@ export default function Profile() {
                 </button>
 
                 <button
-                  onClick={() => navigate('/posts')}
-                  className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg hover:shadow-md transition-all"
+                  onClick={() => navigate('/posts/create')}
+                  className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg hover:shadow-md transition-all"
                 >
-                  <FaBook className="text-blue-600 text-xl" />
+                  <FaBook className="text-green-600 text-xl" />
                   <div className="text-left">
-                    <p className="font-semibold text-gray-900 text-sm">Browse Posts</p>
-                    <p className="text-xs text-gray-600">Find tutors & questions</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/posts/inventory')}
-                  className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-lg hover:shadow-md transition-all"
-                >
-                  <FaTrophy className="text-orange-600 text-xl" />
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-900 text-sm">My Posts</p>
-                    <p className="text-xs text-gray-600">Your learning requests</p>
+                    <p className="font-semibold text-gray-900 text-sm">Create New Post</p>
+                    <p className="text-xs text-gray-600">Share your tutoring services</p>
                   </div>
                 </button>
               </div>
-            </div>
-
-            {/* Account Stats */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Account Stats</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FaClock className="text-blue-600" />
-                    <span className="text-sm text-gray-600">Member Since</span>
-                  </div>
-                  <span className="font-semibold text-gray-900">2024</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FaCheckCircle className="text-green-600" />
-                    <span className="text-sm text-gray-600">Verified</span>
-                  </div>
-                  <span className="font-semibold text-green-600">Yes</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FaStar className="text-yellow-600" />
-                    <span className="text-sm text-gray-600">Rating</span>
-                  </div>
-                  <span className="font-semibold text-yellow-600">5.0</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Security Info */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-6">
-              <div className="flex items-start gap-3">
-                <FaShieldAlt className="text-blue-600 text-xl mt-1" />
-                <div>
-                  <h4 className="font-bold text-gray-900 mb-1">Security Tip</h4>
-                  <p className="text-sm text-gray-700">
-                    Update your password regularly and never share your credentials with anyone.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Info Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Learning Progress */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Learning Progress</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Questions Asked</span>
-                  <span className="text-sm font-bold text-[#03ccba]">8/10</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] h-2 rounded-full" style={{width: '80%'}}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Topics Covered</span>
-                  <span className="text-sm font-bold text-blue-600">12/20</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{width: '60%'}}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Learning Streak</span>
-                  <span className="text-sm font-bold text-orange-600">7 Days</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-orange-500 h-2 rounded-full" style={{width: '100%'}}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Helpful Resources */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Helpful Resources</h3>
-            <div className="space-y-3">
-              <a href="#" className="block p-4 bg-gray-50 rounded-lg hover:bg-[#03ccba] hover:text-white transition-colors">
-                <p className="font-semibold mb-1">📚 Learning Guide</p>
-                <p className="text-sm">Get started with our platform</p>
-              </a>
-
-              <a href="#" className="block p-4 bg-gray-50 rounded-lg hover:bg-[#03ccba] hover:text-white transition-colors">
-                <p className="font-semibold mb-1">❓ FAQ</p>
-                <p className="text-sm">Find answers to common questions</p>
-              </a>
-
-              <a href="mailto:support@grabtutor.com" className="block p-4 bg-gray-50 rounded-lg hover:bg-[#03ccba] hover:text-white transition-colors">
-                <p className="font-semibold mb-1">💬 Contact Support</p>
-                <p className="text-sm">Get help from our team</p>
-              </a>
             </div>
           </div>
         </div>

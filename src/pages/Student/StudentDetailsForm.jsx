@@ -26,22 +26,33 @@ export default function StudentDetailsForm() {
     }
   }, [navigate]);
 
-  // Format ngày sinh chuẩn yyyy-MM-dd
   const formatDate = (dateStr) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0]; // "2025-01-01"
+    return d.toISOString().split('T')[0];
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validation
+    if (!formData.studentName.trim()) {
+      setError('Vui lòng nhập tên');
+      return;
+    }
+    if (!formData.birthday) {
+      setError('Vui lòng chọn ngày sinh');
+      return;
+    }
+    if (!formData.phone.trim() || formData.phone.length < 10) {
+      setError('Vui lòng nhập số điện thoại hợp lệ');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu xác nhận không khớp');
       return;
     }
-
     if (formData.password.length < 5) {
       setError('Mật khẩu phải có ít nhất 5 ký tự');
       return;
@@ -51,23 +62,25 @@ export default function StudentDetailsForm() {
       setLoading(true);
       setError(null);
 
-      await authApi.sendRegisterOtp(formData.email);
-
       const userData = {
         email: formData.email,
         password: formData.password,
         fullName: formData.studentName,
         dob: formatDate(formData.birthday),
-        phoneNumber: formData.phone,
-        role: 'STUDENT'
+        phoneNumber: formData.phone
       };
 
       console.log('userData gửi đi:', userData);
 
-      navigate('/signup-student/verify', { state: { userData } });
+      // Gọi API đăng ký trực tiếp (không cần OTP)
+      await authApi.registerStudent(userData);
+
+      localStorage.removeItem('signupEmail');
+      alert('Đăng ký thành công!');
+      navigate('/login-role');
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || 'Không thể gửi OTP');
+      setError(err.response?.data?.message || 'Không thể đăng ký');
     } finally {
       setLoading(false);
     }
@@ -92,20 +105,22 @@ export default function StudentDetailsForm() {
         </button>
       </div>
 
-      {/* Form */}
+      {/* Main content */}
       <div className="flex-1 flex justify-center items-center px-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-xl w-full">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4">
-                <p className="text-red-700">{error}</p>
-              </div>
-            )}
+        <div className="bg-white rounded-xl shadow-md p-8 max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-6">Thông tin chi tiết</h2>
 
-            {/* Student Name */}
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Full Name */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Student Name
+                Tên đầy đủ
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaUser /></span>
@@ -115,23 +130,22 @@ export default function StudentDetailsForm() {
                   onChange={(e) => setFormData(prev => ({ ...prev, studentName: e.target.value }))}
                   className="w-full p-4 border-0 focus:ring-0 rounded-lg"
                   required
-                  placeholder="Enter your full name"
                 />
               </div>
             </div>
 
-            {/* Email (read-only) */}
+            {/* Email (Read-only) */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
                 Email
               </label>
-              <div className="flex items-center border border-gray-300 rounded-lg">
+              <div className="flex items-center border border-gray-300 rounded-lg bg-gray-50">
                 <span className="pl-4 text-gray-500"><FaEnvelope /></span>
                 <input
                   type="email"
                   value={formData.email}
                   disabled
-                  className="w-full p-4 border-0 bg-gray-50 rounded-lg"
+                  className="w-full p-4 border-0 focus:ring-0 rounded-lg bg-gray-50"
                 />
               </div>
             </div>
@@ -139,7 +153,7 @@ export default function StudentDetailsForm() {
             {/* Birthday */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Birthday
+                Ngày sinh
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaBirthdayCake /></span>
@@ -147,7 +161,6 @@ export default function StudentDetailsForm() {
                   type="date"
                   value={formData.birthday}
                   onChange={(e) => setFormData(prev => ({ ...prev, birthday: e.target.value }))}
-                  max={new Date().toISOString().split('T')[0]}
                   className="w-full p-4 border-0 focus:ring-0 rounded-lg"
                   required
                 />
@@ -157,7 +170,7 @@ export default function StudentDetailsForm() {
             {/* Phone */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Phone Number
+                Số điện thoại
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaPhone /></span>
@@ -167,7 +180,6 @@ export default function StudentDetailsForm() {
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   className="w-full p-4 border-0 focus:ring-0 rounded-lg"
                   required
-                  placeholder="Enter 10-digit phone number"
                   minLength={10}
                   maxLength={10}
                 />
@@ -177,7 +189,7 @@ export default function StudentDetailsForm() {
             {/* Password */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Password
+                Mật khẩu
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaLock /></span>
@@ -188,7 +200,6 @@ export default function StudentDetailsForm() {
                   className="w-full p-4 border-0 focus:ring-0 rounded-lg"
                   required
                   minLength={5}
-                  placeholder="At least 5 characters"
                 />
               </div>
             </div>
@@ -196,7 +207,7 @@ export default function StudentDetailsForm() {
             {/* Confirm Password */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Confirm Password
+                Xác nhận mật khẩu
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaLock /></span>
@@ -211,12 +222,13 @@ export default function StudentDetailsForm() {
               </div>
             </div>
 
+            {/* Submit button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#03ccba] text-white py-4 rounded-lg hover:bg-[#02b5a5] text-lg font-medium mt-8 transition-colors duration-300 disabled:bg-gray-300"
+              className="w-full bg-[#03ccba] text-white py-4 rounded-lg hover:bg-[#02b5a5] text-lg font-medium transition-colors duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {loading ? 'Đang gửi OTP...' : 'Tiếp tục'}
+              {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </button>
           </form>
         </div>
@@ -227,21 +239,17 @@ export default function StudentDetailsForm() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-8">
             <p className="text-gray-600">
-              Need help? Call us on{' '}
+              Cần giúp đỡ? Gọi cho chúng tôi{' '}
               <a href="tel:+442037736020" className="text-[#03ccba] font-medium">
                 +44 (0) 203 773 6020
               </a>
-              {' '}or{' '}
-              <a href="mailto:help@mytutor.co.uk" className="text-[#03ccba] font-medium">
-                email us
-              </a>
             </p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/login-role')}
             className="bg-[#ebded5] px-8 py-3 rounded-lg hover:bg-[#03ccba] hover:text-white transition-all duration-300 font-medium"
           >
-            Log in
+            Đăng nhập
           </button>
         </div>
       </div>

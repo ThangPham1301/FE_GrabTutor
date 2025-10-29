@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUsers, FaEdit, FaTrash, FaSearch, FaSignOutAlt } from 'react-icons/fa';
+import { FaUsers, FaSignOutAlt, FaChalkboardTeacher, FaBook, FaComments, FaWallet } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
+import Navbar from '../../components/Navbar';
 import userApi from '../../api/userApi';
 
 export default function AdminDashboard() {
@@ -19,11 +20,16 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const response = await userApi.getAllUsers();
-      setUsers(response.data);
+      if (response.data && response.data.items) {
+        setUsers(response.data.items);
+      } else {
+        setUsers([]);
+      }
       setError(null);
     } catch (err) {
       setError('Failed to load users');
       console.error('Error fetching users:', err);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -34,103 +40,115 @@ export default function AdminDashboard() {
     navigate('/login-role');
   };
 
+  const menu = [
+    {
+      label: 'Quản lý User',
+      icon: <FaUsers className="text-4xl text-blue-600" />,
+      onClick: () => {
+        console.log('Navigate to /admin/users');
+        navigate('/admin/users');
+      }
+    },
+    {
+      label: 'Quản lý Tutor',
+      icon: <FaChalkboardTeacher className="text-4xl text-green-600" />,
+      onClick: () => {
+        console.log('Navigate to /admin/tutors');
+        navigate('/admin/tutors');
+      }
+    },
+    {
+      label: 'Quản lý môn học',
+      icon: <FaBook className="text-4xl text-yellow-600" />,
+      onClick: () => {
+        console.log('Navigate to /admin/subjects');
+        navigate('/admin/subjects');
+      }
+    },
+    {
+      label: 'Quản lý tương tác',
+      icon: <FaComments className="text-4xl text-pink-600" />,
+      onClick: () => {
+        console.log('Navigate to /admin/interactions');
+        navigate('/admin/interactions');
+      }
+    },
+    {
+      label: 'Quản lý nạp tiền',
+      icon: <FaWallet className="text-4xl text-teal-600" />,
+      onClick: () => {
+        console.log('Navigate to /admin/wallet');
+        navigate('/admin/wallet');
+      }
+    }
+  ];
+
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex justify-center items-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#03ccba]"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <FaUsers className="text-2xl text-[#03ccba]" />
-              <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-            >
-              <FaSignOutAlt /> Logout
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Navbar */}
+      <Navbar />
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Search and filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder="Search users..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba]"
-              />
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
-            </div>
-            <select className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#03ccba]">
-              <option value="all">All Roles</option>
-              <option value="STUDENT">Students</option>
-              <option value="TUTOR">Tutors</option>
-              <option value="ADMIN">Admins</option>
-            </select>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+          <p className="text-gray-600">Quản lý hệ thống GrabTutor</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600 text-sm">Tổng User</p>
+            <p className="text-3xl font-bold text-gray-900">{users.length || 0}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600 text-sm">Tutor</p>
+            <p className="text-3xl font-bold text-gray-900">{users.filter(u => u.role === 'TUTOR').length || 0}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600 text-sm">Student</p>
+            <p className="text-3xl font-bold text-gray-900">{users.filter(u => u.role === 'USER').length || 0}</p>
           </div>
         </div>
 
-        {/* Users table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.fullName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      user.role === 'ADMIN' 
-                        ? 'bg-purple-100 text-purple-800'
-                        : user.role === 'TUTOR'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      user.active 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <button className="text-blue-600 hover:text-blue-900 mx-2">
-                      <FaEdit />
-                    </button>
-                    <button className="text-red-600 hover:text-red-900 mx-2">
-                      <FaTrash />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Menu */}
+        <div className="bg-white rounded-lg shadow p-8 mb-8">
+          <h2 className="text-2xl font-bold mb-6">Quản lý</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {menu.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={item.onClick}
+                type="button"
+                className="flex flex-col items-center justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow hover:shadow-lg hover:from-gray-100 hover:to-gray-200 transition-all duration-300 border border-gray-200 hover:border-[#03ccba] cursor-pointer"
+              >
+                {item.icon}
+                <span className="mt-4 text-sm font-semibold text-gray-700 text-center">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Logout button */}
+        <div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            <FaSignOutAlt /> Đăng xuất
+          </button>
         </div>
       </div>
     </div>

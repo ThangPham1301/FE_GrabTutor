@@ -1,23 +1,32 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Subjects() {
+  const navigate = useNavigate();
+  
   const subjects = [
-    "Maths", "English", "Chemistry", "Physics",
-    "Biology", "Science", "Spanish", "French"
+    "Mathematics", "Physics", "Chemistry", "Biology",
+    "English", "Literature", "History", "Geography"
   ];
 
   return (
-    <section className="bg-[#fdf6f0] py-12 px-6 text-center">
-      <h2 className="text-3xl font-bold mb-8">Pick a subject to get started</h2>
-      <div className="flex flex-wrap gap-4 justify-center">
-        {subjects.map((subj, i) => (
-          <button
-            key={i}
-            className="px-6 py-3 bg-white rounded-lg shadow hover:bg-gray-100 font-medium"
-          >
-            {subj}
-          </button>
-        ))}
+    <section className="py-20 px-4 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-16">
+          Popular Subjects
+        </h2>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {subjects.map((subject, i) => (
+            <button
+              key={i}
+              onClick={() => navigate('/posts')}
+              className="bg-gradient-to-br from-[#03ccba] to-[#02b5a5] text-white rounded-xl py-6 font-bold text-lg hover:shadow-lg hover:scale-105 transition-all duration-300"
+            >
+              {subject}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );
