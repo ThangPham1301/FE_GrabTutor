@@ -125,7 +125,7 @@ export default function AdminDashboard() {
 
         {/* Menu */}
         <div className="bg-white rounded-lg shadow p-8 mb-8">
-          <h2 className="text-2xl font-bold mb-6">Quản lý</h2>
+          <h2 className="text-2xl font-bold mb-6">Management</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {menu.map((item, idx) => (
               <button
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
             onClick={handleLogout}
             className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
           >
-            <FaSignOutAlt /> Đăng xuất
+            <FaSignOutAlt /> Log out
           </button>
         </div>
       </div>

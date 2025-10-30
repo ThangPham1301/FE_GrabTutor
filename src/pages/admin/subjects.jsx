@@ -164,13 +164,13 @@ export default function AdminSubjects() {
                       onClick={() => handleOpenModal(subject)}
                       className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors inline-flex items-center gap-1"
                     >
-                      <FaEdit /> Sửa
+                      <FaEdit /> Edit
                     </button>
                     <button
                       onClick={() => handleDelete(subject.id, subject.name)}
                       className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors inline-flex items-center gap-1"
                     >
-                      <FaTrash /> Xóa
+                      <FaTrash /> Delete
                     </button>
                   </td>
                 </tr>
@@ -193,7 +193,7 @@ export default function AdminSubjects() {
           disabled={pageNo === 0}
           className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400"
         >
-          ← Trang trước
+          ← Previous Page
         </button>
         <span className="px-4 py-2 font-semibold">
           Trang {pageNo + 1} / {totalPages || 1}
@@ -203,7 +203,7 @@ export default function AdminSubjects() {
           disabled={pageNo >= totalPages - 1}
           className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600"
         >
-          Trang sau →
+          Next Page →
         </button>
       </div>
 
