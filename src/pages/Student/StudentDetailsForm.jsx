@@ -71,13 +71,20 @@ export default function StudentDetailsForm() {
       };
 
       console.log('userData gửi đi:', userData);
-
-      // Gọi API đăng ký trực tiếp (không cần OTP)
+      
+      // ✅ Gọi API đăng ký
       await authApi.registerStudent(userData);
 
       localStorage.removeItem('signupEmail');
-      alert('Đăng ký thành công!');
-      navigate('/login-role');
+      
+      // ✅ Hiển thị thông báo thành công
+      alert('✅ Đăng ký thành công! Chuyển hướng về trang chủ...');
+      
+      // ✅ Chuyển hướng sang trang HOME thay vì login-role
+      setTimeout(() => {
+        navigate('/');
+      }, 500);
+      
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.response?.data?.message || 'Không thể đăng ký');

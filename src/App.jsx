@@ -1,5 +1,8 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from './contexts/AuthContext.jsx';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import NotificationCenter from './components/NotificationCenter';  // ✅ Import
+
 import Home from "./pages/Home";
 import Login from "./pages/login";
 import SignupRole from "./pages/signup";
@@ -21,15 +24,27 @@ import AdminUsers from "./pages/admin/users";
 import AdminTutors from "./pages/admin/tutors";
 import AdminSubjects from "./pages/admin/subjects";
 import PostInventory from "./pages/posts/PostInventory";
+import MyBids from "./pages/posts/MyBids";
 import EditPost from "./pages/posts/EditPost";
 import ProfileRouter from "./pages/ProfileRouter";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPasswordEmailForm from "./pages/ForgotPassword/EmailForm";
+import ChatPage from "./pages/Chat/ChatPage";
+import BrowseCourses from './pages/courses/BrowseCourses';
+import CourseDetail from './pages/courses/CourseDetail';
+import TutorCourseInventory from './pages/courses/TutorCourseInventory';
+import MyEnrolledCourses from './pages/courses/MyEnrolledCourses';
+import CreateCourse from './pages/courses/CreateCourse';  // ✅ NEW
+import EditCourse from './pages/courses/EditCourse';      // ✅ NEW
+import LessonManagement from './pages/courses/LessonManagement';
+import LessonPlayer from './pages/courses/LessonPlayer';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <NotificationCenter />
+        
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -44,11 +59,12 @@ function App() {
           
           <Route path="/posts/create" element={<ProtectedRoute element={<CreatePost />} allowedRoles={['TUTOR']} />} />
           <Route path="/posts/inventory" element={<ProtectedRoute element={<PostInventory />} allowedRoles={['USER', 'TUTOR']} />} />
+          <Route path="/posts/my-bids" element={<ProtectedRoute element={<MyBids />} allowedRoles={['TUTOR']} />} />
           <Route path="/posts/edit/:id" element={<ProtectedRoute element={<EditPost />} allowedRoles={['USER', 'TUTOR']} />} />
           <Route path="/posts/:postId/report" element={<ReportPost />} />
           <Route path="/posts/:id" element={<PostDetail />} />
           <Route path="/all-posts" element={<AllPosts />} />
-          <Route path="/wallet/recharge" element={<RechargeOptions />} />
+          <Route path="/wallet/recharge" element={<ProtectedRoute element={<RechargeOptions />} allowedRoles={['USER', 'TUTOR']} />} />
           <Route path="/wallet/recharge/payment" element={<PaymentProcess />} />
 
           {/* ✅ Dynamic Profile Route - Routes theo role */}
@@ -67,6 +83,50 @@ function App() {
           
           {/* Forgot Password Routes */}
           <Route path="/forgot-password" element={<ForgotPasswordEmailForm />} />
+          {/* ✅ NEW - Chat Route */}
+          <Route 
+            path="/chat" 
+            element={
+              <ProtectedRoute 
+                element={<ChatPage />} 
+                allowedRoles={['USER', 'TUTOR']} 
+              />
+            } 
+          />
+
+          {/* ✅ COURSE ROUTES */}
+          <Route path="/courses" element={<BrowseCourses />} />
+          <Route path="/courses/:courseId" element={<CourseDetail />} />
+          
+          {/* TUTOR - My Courses Inventory */}
+          <Route 
+            path="/courses/inventory" 
+            element={<ProtectedRoute element={<TutorCourseInventory />} allowedRoles={['TUTOR']} />} 
+          />
+          
+          {/* ✅ TUTOR - Create Course */}
+          <Route 
+            path="/courses/create" 
+            element={<ProtectedRoute element={<CreateCourse />} allowedRoles={['TUTOR']} />} 
+          />
+          
+          {/* ✅ TUTOR - Edit Course */}
+          <Route 
+            path="/courses/edit/:courseId" 
+            element={<ProtectedRoute element={<EditCourse />} allowedRoles={['TUTOR']} />} 
+          />
+          
+          {/* STUDENT - My Enrolled Courses */}
+          <Route 
+            path="/courses/my-enrolled" 
+            element={<ProtectedRoute element={<MyEnrolledCourses />} allowedRoles={['USER']} />} 
+          />
+          
+          {/* NEW - Lesson Management */}
+          <Route path="/courses/:courseId/lessons" element={<LessonManagement />} />
+          <Route path="/courses/:courseId/learn/:lessonId" element={<LessonPlayer />} />
+          
+          {/* 404 */}
         </Routes>
       </Router>
     </AuthProvider>

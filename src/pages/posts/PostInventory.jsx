@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaArrowLeft, FaSearch, FaFilter, FaCalendar, FaBook } from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
+import PostFormModal from '../../components/PostFormModal';  // ✅ Import
 
 export default function PostInventory() {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export default function PostInventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
   const [subjects, setSubjects] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
 
   useEffect(() => {
     console.log('=== PostInventory useEffect ===');
@@ -143,6 +146,27 @@ export default function PostInventory() {
     if (pageNo > 0) setPageNo(pageNo - 1);
   };
 
+  // ✅ Mở modal
+  const handleOpenModal = (post = null) => {
+    if (post) {
+      setEditingPost(post);
+    } else {
+      setEditingPost(null);
+    }
+    setShowModal(true);
+  };
+
+  // ✅ Đóng modal
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingPost(null);
+  };
+
+  // ✅ Callback khi thành công
+  const handleModalSuccess = () => {
+    fetchMyPosts();
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -166,8 +190,9 @@ export default function PostInventory() {
               <h1 className="text-5xl font-bold mb-3">My Posts</h1>
               <p className="text-lg text-teal-100">Manage and track your tutoring posts</p>
             </div>
+            {/* ✅ Create New Post Button */}
             <button
-              onClick={() => navigate('/posts/create')}
+              onClick={() => handleOpenModal(null)}
               className="flex items-center gap-2 px-8 py-3 bg-white text-[#03ccba] rounded-lg font-bold hover:shadow-lg transition-all duration-300"
             >
               <FaPlus size={20} /> Create New Post
@@ -239,10 +264,12 @@ export default function PostInventory() {
             {/* Desktop - Grid View */}
             <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
               {(searchTerm || filterSubject ? filteredPosts : posts).map(post => (
-                <div key={post.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-                  {/* Image */}
+                // ✅ FIX: Thêm flex flex-col h-full và overflow-hidden
+                <div key={post.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col">
+                  
+                  {/* ✅ Image - Fixed Height */}
                   {post.imageUrl && (
-                    <div className="relative h-48 overflow-hidden">
+                    <div className="relative h-40 overflow-hidden flex-shrink-0">
                       <img
                         src={post.imageUrl}
                         alt={post.title}
@@ -254,12 +281,14 @@ export default function PostInventory() {
                     </div>
                   )}
 
-                  {/* Content */}
-                  <div className="p-6 flex flex-col h-full">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 hover:text-[#03ccba] transition-colors">
+                  {/* ✅ Content - Flex Grow */}
+                  <div className="p-6 flex flex-col flex-grow">
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 hover:text-[#03ccba] transition-colors">
                       {post.title}
                     </h3>
                     
+                    {/* Description */}
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
                       {post.description}
                     </p>
@@ -276,27 +305,31 @@ export default function PostInventory() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    {/* ✅ Action Buttons - Luôn ở dưới cùng */}
+                    <div className="flex gap-2 mt-auto">
                       <button
                         onClick={() => handleViewDetail(post.id)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-1"
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold text-sm flex items-center justify-center gap-1"
                       >
                         <FaEye size={14} /> View
                       </button>
+                      
+                      {/* Edit */}
                       <button
-                        onClick={() => handleEdit(post)}
+                        onClick={() => handleOpenModal(post)}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                         title="Edit"
                       >
-                        <FaEdit />
+                        <FaEdit size={16} />
                       </button>
+                      
+                      {/* Delete */}
                       <button
                         onClick={() => handleDelete(post.id, post.title)}
                         className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                         title="Delete"
                       >
-                        <FaTrash />
+                        <FaTrash size={16} />
                       </button>
                     </div>
                   </div>
@@ -337,7 +370,7 @@ export default function PostInventory() {
                               <FaEye size={16} />
                             </button>
                             <button
-                              onClick={() => handleEdit(post)}
+                              onClick={() => handleOpenModal(post)}
                               className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                               title="Edit"
                             >
@@ -418,7 +451,7 @@ export default function PostInventory() {
             </p>
             {!(searchTerm || filterSubject) && (
               <button
-                onClick={() => navigate('/posts/create')}
+                onClick={() => handleOpenModal(null)}
                 className="px-8 py-3 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-colors font-bold inline-flex items-center gap-2"
               >
                 <FaPlus /> Create First Post
@@ -427,6 +460,15 @@ export default function PostInventory() {
           </div>
         )}
       </div>
+
+      {/* ✅ Reusable PostFormModal */}
+      <PostFormModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSuccess={handleModalSuccess}
+        editingPost={editingPost}
+        title={editingPost ? 'Edit Post' : 'Create New Post'}
+      />
     </div>
   );
 }

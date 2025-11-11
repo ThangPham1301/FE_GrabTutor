@@ -3,7 +3,7 @@ import axios from 'axios';
 const BASE_URL = 'http://localhost:8080';
 
 const adminApi = {
-  // Lấy danh sách môn học
+ 
   getSubjects: async (pageNo = 0, pageSize = 10) => {
     try {
       const url = `${BASE_URL}/grabtutor/subjects?pageNo=${pageNo}&pageSize=${pageSize}&sorts=`;
@@ -20,7 +20,7 @@ const adminApi = {
     }
   },
 
-  // Tạo môn học mới
+ 
   createSubject: async (subjectData) => {
     try {
       const response = await axios.post(
@@ -43,7 +43,7 @@ const adminApi = {
     }
   },
 
-  // Xóa môn học
+
   deleteSubject: async (subjectId) => {
     try {
       const response = await axios.delete(
@@ -62,7 +62,7 @@ const adminApi = {
 
   updateSubject: async (subjectId, subjectData) => {
     try {
-      // Thay PUT bằng POST
+
       const response = await axios.post(
         `${BASE_URL}/grabtutor/subjects/${subjectId}`,
         {

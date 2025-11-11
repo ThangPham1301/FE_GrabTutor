@@ -65,7 +65,7 @@ const postApi = {
         throw new Error('User ID not found');
       }
       
-      const url = `${BASE_URL}/posts/user/${userId}?pageNo=${pageNo}&pageSize=${pageSize}`;
+      const url = `${BASE_URL}/posts/user/${userId}?pageNo=${pageNo}&pageSize=${pageSize}&sorts=`;
       console.log('=== getMyPosts START ===');
       console.log('URL:', url);
       
@@ -93,15 +93,14 @@ const postApi = {
     }
   },
 
-  // Lấy danh sách bài đăng
-  getAllPosts: async (pageNo = 0, pageSize = 10) => {
+  // ✅ FIXED: getAllPosts - NO auth needed
+  getAllPosts: async (pageNo = 0, pageSize = 10, sorts = '') => {
     try {
-      const url = `${BASE_URL}/posts/all?pageNo=${pageNo}&pageSize=${pageSize}&sorts=`;
-      const response = await axios.get(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const url = `${BASE_URL}/posts/all?pageNo=${pageNo}&pageSize=${pageSize}&sorts=${sorts}`;
+      
+      // ✅ No Authorization header - endpoint is public
+      const response = await axios.get(url);
+      
       console.log('getAllPosts response:', response.data);
       
       if (response.data?.data?.items) {
@@ -118,43 +117,49 @@ const postApi = {
     }
   },
 
-  // Lấy bài đăng theo ID
+  // ✅ FIXED: getPostById - NO auth needed for public posts
   getPostById: async (postId) => {
     try {
-      const token = localStorage.getItem('token');
-      
       console.log('=== getPostById START ===');
       console.log('postId:', postId);
-      console.log('Token exists:', !!token);
-      console.log('Token length:', token?.length);
-      console.log('Token preview:', token?.substring(0, 50) + '...');
-      
+
+      // ✅ Try without auth first
       const response = await axios.get(
         `${BASE_URL}/posts/${postId}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
           }
         }
       );
-      
+
       console.log('=== getPostById SUCCESS ===');
-      console.log('Response status:', response.status);
-      console.log('Response data:', response.data);
-      
-      if (response.data?.data) {
-        response.data.data.subjectName = response.data.data.subject?.name || 'N/A';
-      }
-      
+      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
-      console.log('=== getPostById ERROR ===');
-      console.log('Error status:', error.response?.status);
-      console.log('Error message:', error.response?.data?.message);
-      console.log('Error data:', error.response?.data);
-      console.log('Full error:', error);
-      
-      console.error('getPostById error:', error);
+      console.error('❌ getPostById error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ✅ FIXED: searchPostsByName - NO auth needed
+  searchPostsByName: async (keyword, pageNo = 0, pageSize = 10, sorts = '') => {
+    try {
+      console.log('=== searchPostsByName START ===');
+      console.log('keyword:', keyword);
+
+      // ✅ No Authorization header - endpoint is public
+      const response = await axios.get(
+        `${BASE_URL}/posts/search?keyword=${keyword}&pageNo=${pageNo}&pageSize=${pageSize}&sorts=${sorts}`
+      );
+
+      console.log('=== searchPostsByName SUCCESS ===');
+      console.log('Response:', response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ searchPostsByName error:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -236,7 +241,159 @@ const postApi = {
       console.error('getSubjects error:', error);
       throw error;
     }
+  },
+
+  // ✅ NEW - TUTOR accepts a post (creates a bid)
+  tutorBid: async (bidData) => {
+    try {
+      console.log('=== tutorBid START ===');
+      console.log('Bid data:', bidData);
+
+      const response = await axios.post(
+        `${BASE_URL}/posts/tutorBid`,
+        {
+          proposedPrice: bidData.proposedPrice,
+          questionLevel: bidData.questionLevel,
+          description: bidData.description,
+          postId: bidData.postId
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== tutorBid SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('tutorBid error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Get all tutor bids
+  getMyTutorBids: async (pageNo = 0, pageSize = 10) => {
+    try {
+      console.log('=== getMyTutorBids START ===');
+      
+      const response = await axios.get(
+        `${BASE_URL}/posts/myTutorBids?pageNo=${pageNo}&pageSize=${pageSize}&sorts=`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== getMyTutorBids SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('getMyTutorBids error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Check if tutor already bid on this post
+  checkTutorBidExists: async (postId) => {
+    try {
+      console.log('=== checkTutorBidExists START ===');
+      console.log('postId:', postId);
+
+      const response = await axios.get(
+        `${BASE_URL}/posts/${postId}/tutorBid/check`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== checkTutorBidExists SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data?.data || response.data;
+    } catch (error) {
+      console.error('checkTutorBidExists error:', error.response?.data || error.message);
+      // Return false if endpoint doesn't exist or error
+      return false;
+    }
+  },
+
+  // ✅ NEW - Get all tutor bids for a post
+  getTutorBidsForPost: async (postId) => {
+    try {
+      console.log('=== getTutorBidsForPost START ===');
+      console.log('postId:', postId);
+
+      const response = await axios.get(
+        `${BASE_URL}/posts/tutorBid/${postId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== getTutorBidsForPost SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('getTutorBidsForPost error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Accept a tutor bid
+  acceptTutorBid: async (tutorBidId) => {
+    try {
+      console.log('=== acceptTutorBid START ===');
+      console.log('tutorBidId:', tutorBidId);
+
+      const response = await axios.put(
+        `${BASE_URL}/posts/acceptTutor/${tutorBidId}`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== acceptTutorBid SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('acceptTutorBid error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Delete a tutor bid
+  deleteTutorBid: async (tutorBidId) => {
+    try {
+      console.log('=== deleteTutorBid START ===');
+      console.log('tutorBidId:', tutorBidId);
+
+      const response = await axios.put(
+        `${BASE_URL}/posts/tutorBid/${tutorBidId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== deleteTutorBid SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('deleteTutorBid error:', error.response?.data || error.message);
+      throw error;
+    }
   }
+
 };
 
 export default postApi;

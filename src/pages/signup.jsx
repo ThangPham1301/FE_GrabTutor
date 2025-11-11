@@ -79,7 +79,7 @@ const SignupRole = () => {
           </div>
 
           <button 
-            onClick={() => navigate('/login-role')}
+            onClick={() => navigate('/login')}
             className="bg-[#ebded5] px-8 py-3 rounded-lg hover:bg-[#03ccba] hover:text-white transition-all duration-300 font-medium"
           >
             Log in
