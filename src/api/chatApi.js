@@ -222,25 +222,24 @@ const chatApi = {
     let fileUrl = null;
     let fileName = null;
 
-    // Upload file nếu có - ✅ KHÔNG gửi Authorization header
+    // ✅ Upload file TRƯỚC - giống script.js
     if (messageData.file) {
       try {
         const formData = new FormData();
         formData.append('file', messageData.file);
 
-        const uploadResponse = await fetch(`${BASE_URL}/grabtutor/upload`, {
+        // ✅ KHÔNG gửi Authorization header - giống script.js
+        const response = await fetch(`${BASE_URL}/grabtutor/upload`, {
           method: 'POST',
-          // ✅ KHÔNG set headers - let browser handle FormData
           body: formData
         });
 
-        if (!uploadResponse.ok) throw new Error('Upload failed');
-        const uploadData = await uploadResponse.json();
+        if (!response.ok) throw new Error('Upload failed');
         
-        // ✅ Match script.js: try 3 formats
-        fileUrl = uploadData?.data?.fileUrl || uploadData?.fileUrl || uploadData?.url;
+        const data = await response.json();
+        fileUrl = data?.data?.fileUrl || data?.fileUrl || data?.url;
         fileName = messageData.file.name;
-        
+
         if (DEBUG) console.log('✅ [WS] File uploaded:', fileUrl);
       } catch (error) {
         console.error('❌ [WS] File upload error:', error);
@@ -248,21 +247,22 @@ const chatApi = {
       }
     }
 
-    // ✅ SEND MESSAGE - Always include all fields like script.js
+    // ✅ Gửi message qua WebSocket - GIỐNG script.js
     const payload = {
       userId: messageData.userId || localStorage.getItem('userId'),
       roomId: roomId,
       type: 'MESSAGE',
       message: messageData.message || messageData.content || '',
-      fileName: fileName,  // ✅ Always include (even if null)
-      fileUrl: fileUrl     // ✅ Always include (even if null)
+      fileName: fileName,  // ← PHẢI gửi (có thể null)
+      fileUrl: fileUrl     // ← PHẢI gửi (có thể null)
     };
 
     if (DEBUG) {
       console.log('📤 [WS] Final payload:', payload);
-      console.log('   - Message field:', payload.message);
-      console.log('   - FileName:', payload.fileName);
-      console.log('   - FileUrl:', payload.fileUrl);
+      console.log('   - userId:', payload.userId);
+      console.log('   - message:', payload.message);
+      console.log('   - fileName:', payload.fileName);
+      console.log('   - fileUrl:', payload.fileUrl);
     }
 
     wsConnection.send(JSON.stringify(payload));

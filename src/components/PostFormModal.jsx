@@ -200,7 +200,10 @@ export default function PostFormModal({
   console.log('🟢 Modal rendering (isOpen=true)');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    // ✅ BACKDROP - Làm mờ thay vì màu đen đặc
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      
+      {/* ✅ Modal Container */}
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Modal Header */}
         <div className="flex justify-between items-center p-6 border-b-2 border-gray-200 sticky top-0 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white">

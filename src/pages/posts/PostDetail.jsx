@@ -20,8 +20,14 @@ export default function PostDetail() {
   const [review, setReview] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showBidModal, setShowBidModal] = useState(false);
+  const [subjects, setSubjects] = useState([]); // ✅ NEW: subjects list
 
-  // ✅ Fetch post detail - NO AUTH REQUIRED
+  // ✅ Fetch subjects on mount
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  // ✅ Fetch post detail
   useEffect(() => {
     if (!postId) {
       setError('Post ID not found');
@@ -34,6 +40,33 @@ export default function PostDetail() {
       fetchReview();
     }
   }, [postId, user]);
+
+  // ==================== API CALLS ====================
+  const fetchSubjects = async () => {
+    try {
+      console.log('=== fetchSubjects START ===');
+      const response = await postApi.getSubjects();
+      
+      console.log('=== fetchSubjects RESPONSE ===');
+      console.log('Full response:', response);
+      
+      let items = [];
+      if (response.data?.items && Array.isArray(response.data.items)) {
+        items = response.data.items;
+      } else if (response.data && Array.isArray(response.data)) {
+        items = response.data;
+      }
+      
+      console.log('📚 Subjects count:', items.length);
+      items.forEach((subject, idx) => {
+        console.log(`[Subject ${idx}]: id=${subject.id}, name=${subject.name}`);
+      });
+      
+      setSubjects(items);
+    } catch (err) {
+      console.error('❌ Error fetching subjects:', err);
+    }
+  };
 
   const fetchPostDetail = async () => {
     try {
@@ -68,7 +101,7 @@ export default function PostDetail() {
     }
   };
 
-  // ✅ Handlers
+  // ==================== HANDLERS ====================
   const handleBidSubmit = async (bidData) => {
     try {
       await postApi.tutorBid({
@@ -80,28 +113,35 @@ export default function PostDetail() {
       alert('✅ Bid submitted successfully!');
       setShowBidModal(false);
     } catch (err) {
-      alert('❌ Error: ' + (err.response?.data?.message || err.message));
+      alert('❌ Error submitting bid: ' + err.message);
     }
   };
 
-  const handleReviewSuccess = () => {
-    fetchReview();
-    setShowReviewForm(false);
+  // ✅ NEW: Get subject name from subjectId
+  const getSubjectName = (subjectId) => {
+    if (!subjectId) return 'Not specified';
+    
+    const subject = subjects.find(s => {
+      // Match: s.id === subjectId (dù là string hay number)
+      return s.id === subjectId || String(s.id) === String(subjectId);
+    });
+    
+    console.log(`🔍 Finding subject: id=${subjectId}, found=${subject?.name || 'NOT FOUND'}`);
+    return subject?.name || 'Unknown Subject';
   };
 
-  // ✅ Loading State
+  // ==================== RENDER ====================
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-12 flex items-center justify-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#03ccba]"></div>
+        <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+          <p className="text-gray-600 text-lg">Loading post...</p>
         </div>
       </div>
     );
   }
 
-  // ✅ Error State
   if (error || !post) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -137,7 +177,10 @@ export default function PostDetail() {
             <FaArrowLeft /> Back to Posts
           </button>
           <h1 className="text-4xl md:text-5xl font-bold mb-2">{post.title}</h1>
-          <p className="text-teal-100 text-lg">{post.subject?.name || 'General'}</p>
+          {/* ✅ Display subject name from subjectId */}
+          <p className="text-teal-100 text-lg">
+            📖 {getSubjectName(post.subjectId || post.subject?.id)}
+          </p>
         </div>
       </div>
 
@@ -178,7 +221,8 @@ export default function PostDetail() {
                   <div>
                     <p className="text-gray-600 text-sm font-semibold">Subject</p>
                     <p className="text-lg font-bold text-gray-900">
-                      {post.subject?.name || 'Not specified'}
+                      {/* ✅ Use getSubjectName helper */}
+                      {getSubjectName(post.subjectId || post.subject?.id)}
                     </p>
                   </div>
                 </div>
@@ -249,30 +293,25 @@ export default function PostDetail() {
                 {user && user.role === 'USER' && (
                   <button
                     onClick={() => setShowReviewForm(true)}
-                    className="px-4 py-2 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-colors font-semibold"
+                    className="px-4 py-2 bg-[#03ccba] text-white rounded-lg font-semibold hover:bg-[#02b5a5] transition-colors"
                   >
-                    {review ? '✏️ Edit Review' : '✍️ Write Review'}
+                    {review ? 'Edit Review' : 'Add Review'}
                   </button>
                 )}
               </div>
 
               {review ? (
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar
-                          key={i}
-                          size={20}
-                          className={i < review.stars ? 'text-yellow-400' : 'text-gray-300'}
-                        />
-                      ))}
-                    </div>
-                    <span className="font-bold text-gray-900">{review.stars}/5</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    {[...Array(5)].map((_, i) => (
+                      <FaStar
+                        key={i}
+                        size={20}
+                        className={i < review.stars ? 'text-yellow-400' : 'text-gray-300'}
+                      />
+                    ))}
                   </div>
-                  {review.description && (
-                    <p className="text-gray-700">{review.description}</p>
-                  )}
+                  <p className="text-gray-700">{review.description}</p>
                 </div>
               ) : (
                 <p className="text-gray-600 italic">No review yet. Be the first to review!</p>
@@ -297,66 +336,48 @@ export default function PostDetail() {
 
               {/* ✅ Student Waiting Message */}
               {user && user.role === 'USER' && (
-                <div className="p-4 bg-blue-50 rounded-lg text-center border-l-4 border-blue-400">
-                  <p className="text-sm text-blue-700 font-semibold">
-                    Waiting for tutor bids...
-                  </p>
+                <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                  <p className="text-blue-800 text-sm font-semibold">Waiting for tutor bids...</p>
                 </div>
               )}
 
               {/* ✅ Login Prompt */}
               {!user && (
-                <button
-                  onClick={() => navigate('/login')}
-                  className="w-full px-6 py-3 bg-[#03ccba] text-white rounded-lg font-bold hover:bg-[#02b5a5] transition-colors"
-                >
-                  🔐 Login to Bid
-                </button>
+                <div className="space-y-2">
+                  <p className="text-gray-600 text-sm">Login to submit a bid</p>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="w-full px-6 py-3 bg-[#03ccba] text-white rounded-lg font-bold hover:bg-[#02b5a5] transition-all"
+                  >
+                    Login
+                  </button>
+                </div>
               )}
-
-              {/* ✅ Report Button */}
-              <button
-                onClick={() => navigate(`/posts/${postId}/report`)}
-                className="w-full px-6 py-3 border-2 border-red-300 text-red-600 rounded-lg font-bold hover:bg-red-50 transition-colors"
-              >
-                🚩 Report Post
-              </button>
-
-              {/* ✅ Status Badge */}
-              <div className="pt-4 border-t">
-                <span className={`inline-block px-4 py-2 rounded-full font-bold text-sm ${
-                  post.status === 'OPEN'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {post.status === 'OPEN' ? '✅ Open for Bids' : '❌ Closed'}
-                </span>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ✅ Review Form Modal */}
+      {/* ✅ Modals */}
       {showReviewForm && (
         <ReviewForm
           postId={postId}
           onClose={() => setShowReviewForm(false)}
-          onSuccess={handleReviewSuccess}
+          onSuccess={() => {
+            setShowReviewForm(false);
+            fetchReview();
+          }}
           existingReview={review}
         />
       )}
 
-      {/* ✅ Bid Modal */}
-      <TutorBidModal
-        isOpen={showBidModal}
-        onClose={() => setShowBidModal(false)}
-        onSuccess={() => {
-          setShowBidModal(false);
-          fetchTutorBids?.();
-        }}
-        post={post}
-      />
+      {showBidModal && (
+        <TutorBidModal
+          postId={postId}
+          onClose={() => setShowBidModal(false)}
+          onSubmit={handleBidSubmit}
+        />
+      )}
     </div>
   );
 }

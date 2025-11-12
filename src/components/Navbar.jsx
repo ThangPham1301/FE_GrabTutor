@@ -101,20 +101,7 @@ export default function Navbar() {
 
                 {/* Dropdown Menu */}
                 <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top">
-                  {/* Ask Question */}
-                  <button
-                    onClick={() => {
-                      navigate('/posts');
-                      setIsDropdownOpen(false);
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 transition-colors"
-                  >
-                    <FaPlus size={16} className="text-[#03ccba]" />
-                    <div>
-                      <p className="font-semibold text-sm text-gray-900">Ask Question</p>
-                      <p className="text-xs text-gray-600">Post your homework questions</p>
-                    </div>
-                  </button>
+                
 
                   {/* My Posts */}
                   <button

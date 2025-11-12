@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter, FaCalendar, FaBook,
   FaChevronLeft, FaChevronRight, FaSpinner, FaTimes, FaChartBar,
-  FaClock, FaCheckCircle, FaExclamationCircle, FaArrowRight
+  FaClock, FaCheckCircle, FaExclamationCircle, FaArrowRight,FaBox
 } from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
@@ -28,7 +28,6 @@ export default function PostInventory() {
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [subjects, setSubjects] = useState([]);
   
   // Modal
@@ -47,22 +46,31 @@ export default function PostInventory() {
 
   useEffect(() => {
     filterPosts();
-  }, [posts, searchTerm, filterSubject, filterStatus]);
+  }, [posts, searchTerm, filterSubject]);
 
   // ==================== API CALLS ====================
   const fetchSubjects = async () => {
     try {
       const response = await postApi.getSubjects();
       
+      console.log('=== fetchSubjects RESPONSE ===');
+      console.log('Full response:', response);
+      
       let items = [];
       if (response.data?.items && Array.isArray(response.data.items)) {
         items = response.data.items;
-      } else if (Array.isArray(response.data)) {
+      } else if (response.data && Array.isArray(response.data)) {
         items = response.data;
       }
+      
+      console.log('📚 Subjects count:', items.length);
+      items.forEach((subject, idx) => {
+        console.log(`[Subject ${idx}]: id=${subject.id}, name=${subject.name}`);
+      });
+      
       setSubjects(items);
     } catch (err) {
-      console.error('Error fetching subjects:', err);
+      console.error('❌ Error fetching subjects:', err);
     }
   };
 
@@ -73,25 +81,34 @@ export default function PostInventory() {
       
       const response = await postApi.getMyPosts(pageNo, pageSize);
       
+      console.log('=== fetchMyPosts RESPONSE ===');
+      console.log('Full response:', response);
+      
       let items = [];
       let totalPagesValue = 0;
       
-      if (response.data?.data?.items) {
-        items = response.data.data.items;
-        totalPagesValue = response.data.data.totalPages || 0;
-      } else if (response.data?.items) {
+      if (response.data?.items && Array.isArray(response.data.items)) {
         items = response.data.items;
         totalPagesValue = response.data.totalPages || 0;
       } else if (Array.isArray(response.data)) {
         items = response.data;
       }
       
+      console.log('📋 Posts count:', items.length);
+      items.forEach((post, idx) => {
+        console.log(`[Post ${idx}]:`);
+        console.log('  - id:', post.id);
+        console.log('  - title:', post.title);
+        console.log('  - subjectId:', post.subjectId);
+        console.log('  - subject.name:', post.subject?.name);
+      });
+      
       setPosts(items);
       setTotalPages(totalPagesValue);
       if (DEBUG) console.log('✅ Posts loaded:', items.length);
     } catch (err) {
-      console.error('Error fetching posts:', err);
-      setError(err.message || 'Unable to load posts');
+      console.error('❌ Error fetching posts:', err);
+      setError('Failed to load your posts');
       setPosts([]);
     } finally {
       setLoading(false);
@@ -111,7 +128,7 @@ export default function PostInventory() {
       );
     }
 
-    // Subject filter
+    // ✅ Subject filter - LỌC THEO MÔNAPPROX
     if (filterSubject) {
       filtered = filtered.filter(post =>
         (post.subject?.id === parseInt(filterSubject) || 
@@ -119,14 +136,10 @@ export default function PostInventory() {
       );
     }
 
-    // Status filter
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(post => {
-        if (filterStatus === 'open') return post.status === 'OPEN';
-        if (filterStatus === 'closed') return post.status === 'CLOSED';
-        return true;
-      });
-    }
+    // Giữ thứ tự theo createdAt (mới nhất trước)
+    filtered = filtered.sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
 
     setFilteredPosts(filtered);
   };
@@ -179,30 +192,20 @@ export default function PostInventory() {
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilterSubject('');
-    setFilterStatus('all');
     setPageNo(0);
   };
 
   // ==================== UTILITIES ====================
-  const getStatusIcon = (status) => {
-    if (status === 'OPEN') return <FaCheckCircle className="text-green-600" />;
-    if (status === 'CLOSED') return <FaExclamationCircle className="text-red-600" />;
-    return <FaClock className="text-gray-600" />;
-  };
-
-  const getStatusColor = (status) => {
-    if (status === 'OPEN') return 'bg-green-100 text-green-700';
-    if (status === 'CLOSED') return 'bg-red-100 text-red-700';
-    return 'bg-gray-100 text-gray-700';
+  const getSubjectName = (subjectId) => {
+    if (!subjectId) return 'N/A';
+    
+    const subject = subjects.find(s => s.id === subjectId);
+    console.log(`🔍 Finding subject: id=${subjectId}, found=${subject?.name || 'NOT FOUND'}`);
+    return subject?.name || 'Unknown Subject';
   };
 
   const displayPosts = filteredPosts;
-  const hasFilters = searchTerm.trim() || filterSubject || filterStatus !== 'all';
-  const stats = {
-    total: posts.length,
-    open: posts.filter(p => p.status === 'OPEN').length,
-    closed: posts.filter(p => p.status === 'CLOSED').length
-  };
+  const hasFilters = searchTerm.trim() || filterSubject;
 
   // ==================== RENDER ====================
   if (!user) {
@@ -217,65 +220,46 @@ export default function PostInventory() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
       <Navbar />
 
-      {/* ==================== HERO SECTION ==================== */}
-      <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-16 px-4 shadow-lg">
+      {/* ==================== HERO SECTION - SIMPLIFIED ==================== */}
+      <div className="bg-gradient-to-r from-[#03ccba] via-teal-500 to-[#02b5a5] text-white py-12 px-4 shadow-lg">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-start gap-8">
-            <div className="flex-1">
-              <h1 className="text-5xl md:text-6xl font-bold mb-4">
-                📝 My Posts
-              </h1>
-              <p className="text-xl text-teal-100 mb-6">
-                Manage and track all your tutoring questions
-              </p>
-              
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 max-w-md">
-                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-4 py-3">
-                  <div className="text-3xl font-bold">{stats.total}</div>
-                  <div className="text-sm text-teal-100">Total Posts</div>
-                </div>
-                <div className="bg-green-500 bg-opacity-30 backdrop-blur-sm rounded-lg px-4 py-3">
-                  <div className="text-3xl font-bold">{stats.open}</div>
-                  <div className="text-sm text-teal-100">Open</div>
-                </div>
-                <div className="bg-red-500 bg-opacity-30 backdrop-blur-sm rounded-lg px-4 py-3">
-                  <div className="text-3xl font-bold">{stats.closed}</div>
-                  <div className="text-sm text-teal-100">Closed</div>
-                </div>
+          <div className="flex items-center justify-between">
+            {/* Left - Title */}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <span className="text-3xl">📝</span>
               </div>
+              <h1 className="text-4xl md:text-5xl font-bold">My Posts</h1>
             </div>
 
-            {/* Create Button */}
+            {/* Right - Create Button */}
             <button
-              onClick={() => handleOpenModal(null)}
-              className="px-8 py-4 bg-white text-[#03ccba] rounded-xl font-bold hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 px-6 py-3 bg-white text-[#03ccba] rounded-lg font-bold hover:shadow-lg transition-all hover:scale-105 text-sm md:text-base whitespace-nowrap"
             >
-              <FaPlus size={20} />
-              <span>Create Post</span>
+              <FaPlus size={18} /> Create Post
             </button>
           </div>
         </div>
       </div>
 
-      {/* ==================== MAIN CONTENT ==================== */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        
-        {/* Error Alert */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8 rounded-lg">
-            <p className="text-red-700 font-semibold">⚠️ {error}</p>
-          </div>
-        )}
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
 
-        {/* ==================== SEARCH & FILTER ==================== */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-100">
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             {/* Search Input */}
-            <div className="md:col-span-5">
+            <div className="md:col-span-7">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 🔍 Search Posts
               </label>
@@ -291,7 +275,7 @@ export default function PostInventory() {
               </div>
             </div>
 
-            {/* Subject Filter */}
+            {/* ✅ Subject Filter */}
             <div className="md:col-span-3">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 📖 Subject
@@ -307,22 +291,6 @@ export default function PostInventory() {
                     {subject.name}
                   </option>
                 ))}
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                📊 Status
-              </label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white"
-              >
-                <option value="all">All Status</option>
-                <option value="open">Open</option>
-                <option value="closed">Closed</option>
               </select>
             </div>
 
@@ -342,185 +310,137 @@ export default function PostInventory() {
 
           {/* Results Info */}
           {hasFilters && (
-            <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded text-sm text-blue-700 flex items-center gap-2">
-              <FaFilter size={14} />
-              Found <span className="font-bold">{displayPosts.length}</span> post{displayPosts.length !== 1 ? 's' : ''} matching your criteria
+            <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <p className="text-blue-800 text-sm font-semibold">
+                ✅ Showing {displayPosts.length} of {posts.length} posts
+              </p>
             </div>
           )}
         </div>
 
-        {/* ==================== POSTS TABLE ==================== */}
-        {loading ? (
-          <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
-            <FaSpinner className="animate-spin text-5xl text-[#03ccba] mx-auto mb-4" />
-            <p className="text-gray-600 text-lg font-semibold">Loading posts...</p>
+        {/* Table */}
+        {displayPosts.length > 0 ? (
+          <div className="overflow-x-auto bg-white rounded-lg shadow">
+            <table className="w-full">
+              {/* Header */}
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">#</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Post Title</th>
+                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Subject</th>
+                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Created Date</th>
+                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
+                </tr>
+              </thead>
+
+              {/* Body */}
+              <tbody className="divide-y divide-gray-200">
+                {displayPosts.map((post, index) => (
+                  <tr key={post.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-gray-600 font-semibold">{index + 1}</td>
+                    
+                    {/* Post Title với Image */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {post.imageUrl && (
+                          <img
+                            src={post.imageUrl}
+                            alt={post.title}
+                            className="w-10 h-10 rounded object-cover"
+                          />
+                        )}
+                        <div>
+                          <p className="font-semibold text-gray-900 hover:text-[#03ccba] cursor-pointer transition-colors">
+                            {post.title}
+                          </p>
+                          <p className="text-xs text-gray-600 line-clamp-1 mt-1">
+                            {post.description}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Subject Name - Badge */}
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold border border-blue-300">
+                        {getSubjectName(post.subjectId || post.subject?.id)}
+                      </span>
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">
+                      {new Date(post.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        {/* View Button */}
+                        <button
+                          onClick={() => handleViewDetail(post.id)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <FaEye size={16} />
+                        </button>
+
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => handleOpenModal(post)}
+                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Edit Post"
+                        >
+                          <FaEdit size={16} />
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(post.id, post.title)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Post"
+                        >
+                          <FaTrash size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : displayPosts.length > 0 ? (
-          <>
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  {/* Header */}
-                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">#</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Post Title</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Subject</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Status</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Created Date</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
-                    </tr>
-                  </thead>
-
-                  {/* Body */}
-                  <tbody className="divide-y divide-gray-200">
-                    {displayPosts.map((post, index) => (
-                      <tr key={post.id} className="hover:bg-gray-50 transition-colors group">
-                        {/* Index */}
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          <span className="font-bold text-[#03ccba]">
-                            {pageNo * pageSize + index + 1}
-                          </span>
-                        </td>
-
-                        {/* Title */}
-                        <td className="px-6 py-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#03ccba] to-[#02b5a5] flex-shrink-0 flex items-center justify-center text-white font-bold">
-                              {post.title?.charAt(0) || 'P'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 line-clamp-1 hover:text-[#03ccba] transition-colors">
-                                {post.title}
-                              </p>
-                              <p className="text-xs text-gray-600 line-clamp-1 mt-1">
-                                {post.description}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Subject */}
-                        <td className="px-6 py-4 text-center">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
-                            {post.subject?.name || 'N/A'}
-                          </span>
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-6 py-4 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center justify-center gap-1 w-fit mx-auto ${getStatusColor(post.status || 'OPEN')}`}>
-                            {getStatusIcon(post.status)}
-                            {post.status || 'OPEN'}
-                          </span>
-                        </td>
-
-                        {/* Date */}
-                        <td className="px-6 py-4 text-center text-sm text-gray-600">
-                          <div className="flex items-center justify-center gap-2">
-                            <FaCalendar size={14} className="text-[#03ccba]" />
-                            <span>
-                              {post.createdAt 
-                                ? new Date(post.createdAt).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                  })
-                                : 'N/A'}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            {/* View */}
-                            <button
-                              onClick={() => handleViewDetail(post.id)}
-                              className="p-2.5 bg-[#03ccba] text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
-                              title="View"
-                            >
-                              <FaEye size={14} />
-                            </button>
-
-                            {/* Edit */}
-                            <button
-                              onClick={() => handleOpenModal(post)}
-                              className="p-2.5 bg-blue-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
-                              title="Edit"
-                            >
-                              <FaEdit size={14} />
-                            </button>
-
-                            {/* Delete */}
-                            <button
-                              onClick={() => handleDelete(post.id, post.title)}
-                              className="p-2.5 bg-red-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
-                              title="Delete"
-                            >
-                              <FaTrash size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-6 mt-8">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={pageNo === 0}
-                  className="px-6 py-3 bg-white text-gray-700 rounded-lg border-2 border-gray-200 hover:border-[#03ccba] hover:text-[#03ccba] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-2 shadow-md"
-                >
-                  <FaChevronLeft size={16} />
-                  Previous
-                </button>
-
-                <div className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg font-bold shadow-md min-w-max">
-                  Page {pageNo + 1} of {totalPages}
-                </div>
-
-                <button
-                  onClick={handleNextPage}
-                  disabled={pageNo >= totalPages - 1}
-                  className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-2 shadow-md"
-                >
-                  Next
-                  <FaChevronRight size={16} />
-                </button>
-              </div>
-            )}
-          </>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
-            <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">No Posts Found</h3>
-            <p className="text-gray-600 mb-6">
-              {hasFilters 
-                ? "Try adjusting your search filters"
-                : "You haven't created any posts yet. Start by creating your first post!"}
+          <div className="text-center bg-white rounded-lg p-12 border-2 border-dashed border-gray-300">
+            <FaBox className="text-6xl text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">
+              {hasFilters ? 'No posts match your filters' : 'No posts yet. Create your first post!'}
             </p>
-            <div className="flex gap-4 justify-center">
-              {hasFilters && (
-                <button
-                  onClick={handleClearFilters}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
-                >
-                  Clear Filters
-                </button>
-              )}
-              <button
-                onClick={() => handleOpenModal(null)}
-                className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center gap-2"
-              >
-                <FaPlus /> Create Your First Post
-              </button>
-            </div>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-8">
+            <button
+              onClick={handlePrevPage}
+              disabled={pageNo === 0}
+              className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition-colors"
+            >
+              ← Previous
+            </button>
+            <span className="px-4 py-2 font-semibold text-gray-700">
+              Page {pageNo + 1} / {totalPages}
+            </span>
+            <button
+              onClick={handleNextPage}
+              disabled={pageNo >= totalPages - 1}
+              className="px-4 py-2 bg-[#03ccba] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#02b5a5] transition-colors"
+            >
+              Next →
+            </button>
           </div>
         )}
       </div>

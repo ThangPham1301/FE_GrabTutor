@@ -136,51 +136,15 @@ export default function BrowseCourses() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ==================== HERO SECTION ==================== */}
+      {/* ==================== HERO SECTION - SIMPLIFIED ==================== */}
       <div className="bg-gradient-to-r from-[#03ccba] via-[#02b5a5] to-[#008b7a] text-white py-16 px-4 shadow-lg">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-start gap-8">
-            <div className="flex-1">
-              <h1 className="text-5xl md:text-6xl font-bold mb-4">
-                🎓 Browse Courses
-              </h1>
-              <p className="text-xl text-teal-100 max-w-2xl mb-6">
-                Discover premium courses from expert tutors and enhance your skills
-              </p>
-              
-              {/* Quick Stats */}
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                    <FaBook size={24} />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold">{displayCourses.length}</div>
-                    <div className="text-sm text-teal-100">Courses</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                    <FaStar size={24} />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold">4.8</div>
-                    <div className="text-sm text-teal-100">Avg Rating</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Featured Badge */}
-            <div className="bg-white bg-opacity-15 backdrop-blur-md rounded-2xl px-8 py-6 border border-white border-opacity-20 min-w-max">
-              <div className="text-center">
-                <div className="text-4xl font-bold mb-2">✨</div>
-                <p className="text-sm text-teal-100 font-semibold">Trusted by</p>
-                <p className="text-2xl font-bold">10K+</p>
-                <p className="text-xs text-teal-100">Active Learners</p>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-5xl md:text-6xl font-bold mb-4">
+            🎓 Browse Courses
+          </h1>
+          <p className="text-xl text-teal-100 max-w-2xl">
+            Discover premium courses from expert tutors and enhance your skills
+          </p>
         </div>
       </div>
 

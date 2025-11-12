@@ -90,7 +90,7 @@ export default function Profile() {
   const handleLogout = () => {
     try {
       logout();
-      navigate('/login-role');
+      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
     }
