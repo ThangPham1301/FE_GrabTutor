@@ -293,18 +293,19 @@ const chatApi = {
       const token = localStorage.getItem('token');
       if (DEBUG) console.log('🔍 [API] Fetching room:', roomId);
 
-      const response = await fetch(`${BASE_URL}/grabtutor/room/${roomId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/${roomId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
       const data = await response.json();
       if (DEBUG) console.log('✅ [API] Room:', data);
       return data?.data || data;
@@ -489,6 +490,62 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
       return data;
     } catch (error) {
       console.error('❌ [API] Error deleting all messages:', error);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Tutor submit solution (IN_PROGRESS → SUBMITTED)
+  submitSolution: async (roomId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('📤 [API] Tutor submitting solution for room:', roomId);
+
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/submit?roomId=${roomId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Solution submitted:', data);
+      return data?.data || data;
+    } catch (error) {
+      console.error('❌ [API] Error submitting solution:', error);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Student confirm solution (SUBMITTED → CONFIRMED)
+  confirmSolution: async (roomId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('✅ [API] Student confirming solution for room:', roomId);
+
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/confirm?roomId=${roomId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Solution confirmed:', data);
+      return data?.data || data;
+    } catch (error) {
+      console.error('❌ [API] Error confirming solution:', error);
       throw error;
     }
   },

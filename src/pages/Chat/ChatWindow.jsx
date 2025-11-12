@@ -1,14 +1,27 @@
 // src/pages/ChatWindow.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaSpinner, FaPaperPlane, FaPaperclip, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import chatApi from '../../api/chatApi';
+import { 
+  FaArrowLeft, FaSpinner, FaTrash, FaPaperPlane, FaEllipsisV, FaPaperclip, 
+  FaTimes, FaFileAlt, FaImage, FaDownload, FaCheckCircle, FaClock, FaCheck,
+  FaPhone, FaEnvelope, FaUser
+} from 'react-icons/fa';
 
 const DEBUG = true;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+// ✅ Helper function - Check if file is image
+const isImageFile = (fileName) => {
+  if (!fileName) return false;
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+  return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+};
+
 export default function ChatWindow({ conversation, onClose, onRefresh }) {
   const { user } = useAuth();
+  
+  // ==================== STATE ====================
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
@@ -18,22 +31,19 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
 
+  // ✅ Room Status Management
+  const [roomStatus, setRoomStatus] = useState(null);
+  const [remainingTime, setRemainingTime] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  
+  // ✅ Image modal
+  const [selectedImage, setSelectedImage] = useState(null);
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // ================== LOAD LỊCH SỬ ==================
-  const fetchMessages = async () => {
-    try {
-      const result = await chatApi.getMessages(conversation.id);
-      const messageList = Array.isArray(result) ? result : [];
-      setMessages(messageList);
-    } catch (err) {
-      console.error('fetchMessages ERROR:', err);
-      setMessages([]);
-    }
-  };
-
-  // ================== INIT ==================
+  // ==================== EFFECTS ====================
   useEffect(() => {
     if (!conversation?.id) return;
 
@@ -42,6 +52,8 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       setError(null);
 
       try {
+        await checkRoomStatus();
+        
         if (!chatApi.isConnected()) {
           setError('Đang kết nối WebSocket...');
           return;
@@ -49,92 +61,203 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
 
         await chatApi.joinRoom(conversation.id);
         await fetchMessages();
-
-        // ✅ DIRECT WebSocket handler - NOT through chatApi.onMessage callback
-        const ws = chatApi.getGlobalConnection();
-        if (ws) {
-          ws.onmessage = (event) => {
-            try {
-              const msg = JSON.parse(event.data);
-              
-              if (DEBUG) {
-                console.log('📨 [ChatWindow] Received:', msg.type);
-                console.log('   - RoomId match:', msg.roomId === conversation.id);
-                console.log('   - Message:', msg.message?.substring(0, 30));
-              }
-
-              // ✅ Display any MESSAGE for this room
-              if (msg?.type === 'MESSAGE' && msg.roomId === conversation.id) {
-                setMessages(prev => {
-                  // Avoid duplicates
-                  if (prev.some(m => m.id === msg.id)) return prev;
-                  
-                  if (DEBUG) console.log('✅ [ChatWindow] Adding message to state:', msg.message);
-                  return [...prev, msg];
-                });
-              }
-            } catch (err) {
-              console.error('❌ [ChatWindow] Parse error:', err);
-            }
-          };
-        }
-
         setWsConnected(true);
+
       } catch (err) {
-        setError('Không thể tham gia phòng');
+        console.error('❌ Init error:', err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
     init();
-
-    return () => {
-      // Cleanup
-    };
   }, [conversation?.id]);
 
-  // ================== SCROLL ==================
+  // ✅ WebSocket listener for instant messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!conversation?.id) return;
 
-  // ================== GỬI TIN NHẮN ==================
+    const handleNewMessage = (event) => {
+      const msgData = event?.data || event;
+      
+      if (msgData?.roomId !== conversation.id) return;
+
+      if (DEBUG) console.log('✅ [WS] New message:', msgData);
+
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === msgData.id);
+        if (exists) return prev;
+        
+        return [...prev, {
+          id: msgData.id,
+          userId: msgData.userId,
+          email: msgData.email,
+          message: msgData.message || msgData.content,
+          fileName: msgData.fileName,
+          fileUrl: msgData.fileUrl,
+          createdAt: msgData.createdAt || new Date().toISOString()
+        }];
+      });
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    };
+
+    if (chatApi.onMessage) {
+      chatApi.onMessage(handleNewMessage);
+    }
+
+    return () => {};
+  }, [conversation?.id]);
+
+  // ✅ Polling every 2 seconds
+  useEffect(() => {
+    if (!conversation?.id) return;
+
+    const pollInterval = setInterval(async () => {
+      await fetchMessages();
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [conversation?.id]);
+
+  // ✅ Timer countdown
+  useEffect(() => {
+    if (remainingTime !== null && remainingTime > 0 && roomStatus === 'IN_PROGRESS') {
+      const timer = setInterval(() => {
+        setRemainingTime(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [remainingTime, roomStatus]);
+
+  // ==================== API CALLS ====================
+  
+  const checkRoomStatus = async () => {
+    try {
+      const room = await chatApi.getRoomById(conversation.id);
+      setRoomStatus(room?.status || 'IN_PROGRESS');
+
+      if (room?.status === 'IN_PROGRESS' && room?.createdAt) {
+        const createdTime = new Date(room.createdAt).getTime();
+        const elapsedTime = Date.now() - createdTime;
+        const remainingMs = (5 * 60 * 1000) - elapsedTime;
+
+        if (remainingMs > 0) {
+          setRemainingTime(Math.ceil(remainingMs / 1000));
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error checking room status:', err);
+    }
+  };
+
+  const fetchMessages = async () => {
+    try {
+      if (DEBUG) console.log('📥 [FETCH] Fetching messages...');
+      
+      const result = await chatApi.getMessages(conversation.id);
+      const messageList = Array.isArray(result) ? result : [];
+      
+      setMessages(prev => {
+        if (prev.length === messageList.length) {
+          if (prev.length > 0 && messageList.length > 0) {
+            const prevLast = prev[prev.length - 1];
+            const currLast = messageList[messageList.length - 1];
+            if (prevLast.id === currLast.id) {
+              return prev;
+            }
+          }
+        }
+        return messageList;
+      });
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+
+    } catch (err) {
+      console.error('❌ [FETCH] Error:', err);
+    }
+  };
+
+  const handleTutorSubmit = async () => {
+    if (!window.confirm('Bạn có chắc chắn sẵn sàng giúp học sinh này không?')) return;
+
+    try {
+      setIsSubmitting(true);
+      await chatApi.submitSolution(conversation.id);
+      alert('✅ Xác nhận thành công! Chờ học sinh phê duyệt...');
+      
+      setRoomStatus('SUBMITTED');
+      await checkRoomStatus();
+    } catch (err) {
+      console.error('❌ Error submitting:', err);
+      alert('❌ Lỗi: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStudentConfirm = async () => {
+    if (!window.confirm('Xác nhận gia sư này và cho phép bắt đầu chat?')) return;
+
+    try {
+      setIsConfirming(true);
+      await chatApi.confirmSolution(conversation.id);
+      alert('✅ Phê duyệt thành công! Bạn có thể chat bây giờ.');
+      
+      setRoomStatus('CONFIRMED');
+      await checkRoomStatus();
+    } catch (err) {
+      console.error('❌ Error confirming:', err);
+      alert('❌ Lỗi: ' + err.message);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // ==================== SEND MESSAGE ====================
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() && !selectedFile) return;
-    if (!wsConnected || sending) return;
 
     try {
       setSending(true);
       setError(null);
 
-      // ✅ Build message data - Match script.js format
-      let messageData = { 
-        userId: user?.userId,  // ✅ Add userId
+      const messageData = {
+        userId: user?.userId,
         message: newMessage || '',
-        content: newMessage || ''  // Keep for compatibility
+        content: newMessage || '',
+        roomId: conversation.id
       };
 
       if (selectedFile) {
         messageData.file = selectedFile;
       }
 
-      if (DEBUG) {
-        console.log('📤 [ChatWindow] Sending message:');
-        console.log('   - UserId:', messageData.userId);
-        console.log('   - Message:', messageData.message.substring(0, 30));
-        console.log('   - Has file:', !!selectedFile);
-      }
-      
       await chatApi.sendMessage(conversation.id, messageData);
-      
-      if (DEBUG) console.log('✅ [ChatWindow] Message sent successfully');
+
       setNewMessage('');
       clearFile();
+
+      setTimeout(async () => {
+        await fetchMessages();
+      }, 100);
+
       onRefresh?.();
+
     } catch (error) {
-      console.error('❌ [ChatWindow] Error sending message:', error);
+      console.error('❌ [SEND] Error:', error);
       setError('❌ Không thể gửi tin nhắn: ' + (error.message || 'Unknown error'));
       setWsConnected(false);
     } finally {
@@ -149,208 +272,328 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
       alert('File phải nhỏ hơn 5MB');
       return;
     }
     setSelectedFile(file);
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => setFilePreview(e.target.result);
-      reader.readAsDataURL(file);
-    } else {
-      setFilePreview(null);
-    }
+    const reader = new FileReader();
+    reader.onload = () => setFilePreview(reader.result);
+    reader.readAsDataURL(file);
   };
 
-  const formatTime = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes}`;
-    } catch (e) {
-      return '';
-    }
-  };
+  if (!conversation) return null;
 
-  const getInitials = (name) => {
-    return (name || 'U').substring(0, 2).toUpperCase();
-  };
-
-  // ================== RENDER ==================
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <FaSpinner className="animate-spin text-4xl text-[#c97a3a] mx-auto mb-4" />
-          <p className="text-gray-600">Đang tải tin nhắn...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // ==================== RENDER ====================
   return (
-    <div className="flex flex-col h-full bg-[#faf6f1]">
-      {/* Header */}
-      <div className="bg-white border-b border-[#d4c4b0] p-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <button onClick={onClose} className="md:hidden text-[#c97a3a]">
+    <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 h-full">
+      
+      {/* ==================== HEADER ==================== */}
+      <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-10">
+        <div className="flex items-center gap-4">
+          <button onClick={onClose} className="md:hidden p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors">
             <FaArrowLeft size={20} />
           </button>
-          <div>
-            <h3 className="font-bold text-[#3d2817]">{conversation.participantName || 'Phòng chat'}</h3>
-            <p className="text-sm text-[#6b5344]">{conversation.postTitle || 'Không có tiêu đề'}</p>
+          
+          {/* User Info */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center font-bold text-lg">
+              {(conversation.participantName || 'U').charAt(0).toUpperCase()
+            }</div>
+            <div>
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <FaUser size={14} />
+                {conversation.participantName || 'Tutor'}
+              </h2>
+              <p className="text-xs text-teal-100 flex items-center gap-1">
+                <FaEnvelope size={12} />
+                {conversation.participantEmail || 'N/A'}
+              </p>
+            </div>
           </div>
+        </div>
+
+        {/* Status Badge */}
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold ${
+          roomStatus === 'CONFIRMED' ? 'bg-green-500 text-white' :
+          roomStatus === 'SUBMITTED' ? 'bg-blue-500 text-white' :
+          roomStatus === 'IN_PROGRESS' ? 'bg-yellow-500 text-white' :
+          'bg-gray-500 text-white'
+        }`}>
+          {roomStatus === 'CONFIRMED' && <FaCheckCircle size={14} />}
+          {roomStatus === 'SUBMITTED' && <FaClock size={14} />}
+          {roomStatus === 'IN_PROGRESS' && <FaClock size={14} />}
+          <span>{roomStatus || 'Loading'}</span>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-100 text-red-700 p-3 text-sm text-center border-b border-red-200">
-          {error}
+      {/* ==================== STATUS BAR ==================== */}
+      {roomStatus && roomStatus !== 'CONFIRMED' && (
+        <div className={`px-4 py-3 text-sm font-semibold flex items-center justify-between ${
+          roomStatus === 'IN_PROGRESS' ? 'bg-yellow-50 text-yellow-800 border-b border-yellow-200' :
+          roomStatus === 'SUBMITTED' ? 'bg-blue-50 text-blue-800 border-b border-blue-200' :
+          'bg-gray-50 text-gray-800 border-b border-gray-200'
+        }`}>
+          <span>
+            {roomStatus === 'IN_PROGRESS' 
+              ? '⏳ Vui lòng chờ gia sư xác nhận' 
+              : roomStatus === 'SUBMITTED' 
+              ? '⏳ Vui lòng phê duyệt gia sư để bắt đầu chat'
+              : ''}
+          </span>
+
+          {roomStatus === 'IN_PROGRESS' && remainingTime !== null && (
+            <span className="text-xs">
+              Hết hạn trong: <span className="font-bold text-red-600">
+                {Math.floor(remainingTime / 60)}:{String(remainingTime % 60).padStart(2, '0')}
+              </span>
+            </span>
+          )}
+
+          {user?.role === 'TUTOR' && roomStatus === 'IN_PROGRESS' && (
+            <button
+              onClick={handleTutorSubmit}
+              disabled={isSubmitting}
+              className="ml-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 font-bold flex items-center gap-2 transition-all"
+            >
+              {isSubmitting ? (
+                <>
+                  <FaSpinner className="animate-spin" size={14} />
+                  <span>Xác nhận...</span>
+                </>
+              ) : (
+                <>
+                  <FaCheck size={14} />
+                  <span>Xác nhận sẵn sàng</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map(msg => {
-          // ✅ FIX: Dùng user.userId thay vì user.id
-          const isOwn = msg.userId === user?.userId;
-          const initials = getInitials(conversation.participantName);
-          const time = formatTime(msg.createdAt);
+      {/* ==================== SUBMITTED STATUS ==================== */}
+      {roomStatus === 'SUBMITTED' && (
+        <div className="px-4 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <FaClock className="text-blue-600 text-lg" />
+            <span className="text-sm font-semibold text-blue-800">
+              ✅ Gia sư đã xác nhận sẵn sàng! Phê duyệt để bắt đầu chat.
+            </span>
+          </div>
 
-          console.log('📊 Message Check:', {
-            msgUserId: msg.userId,
-            currentUserId: user?.userId,
-            isOwn: isOwn,
-            messageContent: msg.message?.substring(0, 20)
-          });
+          {user?.role === 'USER' && (
+            <div className="flex gap-2 ml-auto">
+              <button
+                onClick={handleStudentConfirm}
+                disabled={isConfirming}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-bold flex items-center gap-2 whitespace-nowrap transition-all"
+              >
+                {isConfirming ? (
+                  <>
+                    <FaSpinner className="animate-spin" size={14} />
+                    <span>Phê duyệt...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaCheckCircle size={14} />
+                    <span>Phê duyệt</span>
+                  </>
+                )}
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold flex items-center gap-2 whitespace-nowrap transition-all"
+              >
+                <FaTimes size={14} />
+                <span>Report</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ==================== MESSAGES ==================== */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg, idx) => {
+          const isOwnMessage = msg.userId === user?.userId;
+          const isImage = msg.fileUrl && isImageFile(msg.fileName);
 
           return (
-            <div
-              key={msg.id}
-              className={`flex ${isOwn ? 'justify-end' : 'justify-start'} items-end gap-2`}
-            >
-              {/* Avatar - chỉ hiển thị khi không phải của mình */}
-              {!isOwn && (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c97a3a] to-[#b86a2a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {initials}
-                </div>
-              )}
+            <div key={idx} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+              <div className={`flex gap-3 max-w-sm ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
+                {/* Avatar */}
+                {!isOwnMessage && (
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                    {(conversation.participantName || 'T').charAt(0).toUpperCase()}
+                  </div>
+                )}
 
-              {/* Message Bubble */}
-              <div className={`max-w-xs md:max-w-md ${isOwn ? 'order-2' : ''}`}>
-                <div
-                  className={`rounded-2xl px-4 py-3 shadow-sm ${
-                    isOwn
-                      ? 'bg-[#c97a3a] text-white rounded-br-none'  // ← Màu của bạn
-                      : 'bg-[#e8dcc8] text-[#3d2817] rounded-bl-none'  // ← Màu người khác
-                  }`}
-                >
-                  {msg.message && (
-                    <p className="text-sm break-words whitespace-pre-wrap">{msg.message}</p>
+                {/* Message Content */}
+                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                  {/* Sender Info */}
+                  {!isOwnMessage && (
+                    <p className="text-xs text-gray-600 font-semibold mb-1 px-2">
+                      {msg.email || 'Tutor'}
+                    </p>
                   )}
 
-                  {msg.fileUrl && (
-                    <div className="mt-2">
-                      {msg.fileUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                  {/* Message Bubble */}
+                  <div className={`px-4 py-3 rounded-2xl ${
+                    isOwnMessage
+                      ? 'bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-br-none'
+                      : 'bg-white text-gray-900 rounded-bl-none shadow-md'
+                  }`}>
+                    {/* Text Message */}
+                    {msg.message && (
+                      <p className="break-words whitespace-pre-wrap">{msg.message}</p>
+                    )}
+
+                    {/* ✅ Image Display */}
+                    {isImage && (
+                      <div className="mt-2">
                         <img
                           src={msg.fileUrl}
                           alt={msg.fileName}
-                          className="max-w-full h-auto rounded-lg cursor-pointer shadow-sm"
-                          onClick={() => window.open(msg.fileUrl, '_blank')}
+                          className="max-w-xs h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setSelectedImage(msg.fileUrl)}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
                         />
-                      ) : (
-                        <a
-                          href={msg.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs underline text-blue-600 flex items-center gap-1"
-                        >
-                          📎 {msg.fileName}
-                        </a>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {/* Timestamp */}
-                  <p className={`text-xs mt-1 ${isOwn ? 'text-[#ffffffaa]' : 'text-[#6b5344]'}`}>
-                    {time}
+                    {/* File Download */}
+                    {msg.fileUrl && !isImage && (
+                      <a
+                        href={msg.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-sm mt-2 flex items-center gap-2 hover:underline ${
+                          isOwnMessage ? 'text-white' : 'text-[#03ccba]'
+                        }`}
+                      >
+                        <FaDownload size={12} />
+                        📎 {msg.fileName || 'Download File'}
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Time */}
+                  <p className="text-xs text-gray-500 mt-1 px-2">
+                    {new Date(msg.createdAt).toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })}
                   </p>
                 </div>
-              </div>
 
-              {/* Avatar - chỉ hiển thị khi là của mình */}
-              {isOwn && (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c97a3a] to-[#b86a2a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {getInitials(user?.name || 'Me')}
-                </div>
-              )}
+                {/* Own User Avatar */}
+                {isOwnMessage && (
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                    {(user?.fullName || 'Y').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* File Preview */}
-      {selectedFile && (
-        <div className="px-4 pb-2">
-          <div className="bg-white rounded-lg p-3 border border-[#d4c4b0] flex items-center gap-3">
-            {filePreview ? (
-              <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded" />
-            ) : (
-              <div className="w-12 h-12 bg-gray-200 border-2 border-dashed rounded flex items-center justify-center">
-                <span className="text-xs text-gray-500">File</span>
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#3d2817] truncate">{selectedFile.name}</p>
-              <p className="text-xs text-[#6b5344]">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-            </div>
+      {/* ==================== INPUT ==================== */}
+      {roomStatus === 'CONFIRMED' ? (
+        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4 sticky bottom-0 shadow-lg">
+          <div className="flex gap-2">
             <button
-              onClick={clearFile}
-              className="text-[#c97a3a] hover:text-[#b86a2a]"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || !wsConnected}
+              className="p-2 rounded-lg bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white hover:shadow-lg disabled:opacity-50 transition-all"
             >
-              <FaTimes />
+              <FaPaperclip size={18} />
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Nhập tin nhắn..."
+              disabled={sending || !wsConnected}
+              className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 transition-all"
+            />
+
+            <button
+              type="submit"
+              disabled={sending || !wsConnected || (!newMessage.trim() && !selectedFile)}
+              className="p-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all"
+            >
+              {sending ? <FaSpinner className="animate-spin" size={18} /> : <FaPaperPlane size={18} />}
+            </button>
+          </div>
+
+          {filePreview && (
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg flex items-center justify-between border-l-4 border-[#03ccba]">
+              <div className="flex items-center gap-2">
+                {filePreview.startsWith('data:image') ? (
+                  <>
+                    <FaImage className="text-[#03ccba] text-lg" />
+                    <span className="text-sm font-semibold text-gray-700">🖼️ Image Preview</span>
+                  </>
+                ) : (
+                  <>
+                    <FaFileAlt className="text-[#03ccba] text-lg" />
+                    <span className="text-sm font-semibold text-gray-700">{selectedFile?.name}</span>
+                  </>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={clearFile}
+                className="p-1 hover:bg-red-200 rounded transition-colors text-red-600"
+              >
+                <FaTimes size={16} />
+              </button>
+            </div>
+          )}
+        </form>
+      ) : (
+        <div className="bg-gray-200 border-t border-gray-300 p-4 text-center text-gray-700 font-semibold">
+          🔒 Chat sẽ được bật khi cả hai bên xác nhận
+        </div>
+      )}
+
+      {/* ==================== IMAGE MODAL ==================== */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-screen">
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="max-w-full max-h-screen object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-200 transition-colors shadow-lg"
+            >
+              <FaTimes size={24} className="text-gray-900" />
             </button>
           </div>
         </div>
       )}
-
-      {/* Input */}
-      <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-[#d4c4b0]">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-10 h-10 rounded-lg border border-[#d4c4b0] flex items-center justify-center text-[#c97a3a] hover:bg-[#f0e6d8] transition"
-          >
-            <FaPaperclip size={18} />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Nhập tin nhắn..."
-            className="flex-1 px-4 py-2 border border-[#d4c4b0] rounded-lg text-sm focus:outline-none focus:border-[#c97a3a] focus:ring-2 focus:ring-[#c97a3a]/20"
-          />
-          <button
-            type="submit"
-            disabled={sending}
-            className="w-10 h-10 rounded-lg bg-[#c97a3a] text-white flex items-center justify-center hover:bg-[#b86a2a] transition disabled:opacity-50"
-          >
-            {sending ? <FaSpinner className="animate-spin" /> : <FaPaperPlane size={16} />}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
