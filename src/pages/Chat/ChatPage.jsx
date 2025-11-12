@@ -1,10 +1,14 @@
+// src/pages/ChatPage.jsx
 import React, { useState, useEffect } from 'react';
+import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
 import Navbar from '../../components/Navbar';
-import ChatSidebar from '../../components/ChatSidebar';
-import ChatWindow from '../../components/ChatWindow';
+import ChatSidebar from './ChatSidebar';
+import ChatWindow from './ChatWindow';
 import chatApi from '../../api/chatApi';
+import { useAuth } from '../../contexts/AuthContext';
+
+const DEBUG = true;
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -14,77 +18,93 @@ export default function ChatPage() {
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login-role');
-      return;
-    }
-
-    const roomId = searchParams.get('roomId');
-    if (roomId) {
-      joinRoomByUrl(roomId);
-    }
-
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-
+    const handleResize = () => setIsMobileView(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [user, navigate, searchParams]);
-
-  // ✅ Cleanup WebSocket when leaving chat
-  useEffect(() => {
-    return () => {
-      chatApi.disconnectWebSocket();
-    };
   }, []);
 
-  const joinRoomByUrl = async (roomId) => {
-    try {
-      setLoading(true);
-      console.log('Joining room from URL:', roomId);
+  // CHỈ CONNECT 1 LẦN Ở ĐÂY
+  useEffect(() => {
+    const initializeChat = async () => {
+      try {
+        if (!user) {
+          console.warn('⚠️ User not authenticated');
+          navigate('/login-role');
+          return;
+        }
 
-      const room = await chatApi.getRoomById(roomId);
-      console.log('Room found:', room);
+        if (DEBUG) console.log('🔌 Initializing WebSocket...');
+        
+        // ✅ Only connect if not already connected
+        if (!chatApi.isConnected()) {
+          await chatApi.connectWebSocket();
+          console.log('✅ WebSocket connected');
+        } else {
+          console.log('✅ WebSocket already connected, reusing...');
+        }
+        
+        setConnected(true);
+        setError(null);
+      } catch (err) {
+        console.error('❌ Failed to connect:', err);
+        setError('Không thể kết nối đến server chat');
+        setConnected(false);
+      }
+    };
 
-      setSelectedConversation(room);
-    } catch (error) {
-      console.error('Error joining room:', error);
-      alert('❌ Không thể tham gia phòng');
-    } finally {
-      setLoading(false);
-    }
-  };
+    initializeChat();
+
+    return () => {
+      // Don't disconnect on unmount - keep connection alive
+      // chatApi.disconnectWebSocket();
+    };
+  }, [user, navigate]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  if (!user) return null;
-
   if (loading) {
     return (
-      <div className="h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#03ccba] mx-auto mb-4"></div>
-            <p className="text-gray-600">Đang tham gia phòng...</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-t-[#03ccba] border-gray-200 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang kết nối...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      {/* Chat Container */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Hide on mobile when conversation selected */}
+      {error && (
+        <div className="bg-red-100 border-b-2 border-red-500 p-3 text-red-700 text-sm">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 underline font-semibold">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm font-semibold text-gray-700">
+            {connected ? 'Connected' : 'Disconnected'}
+          </span>
+        </div>
+        <button onClick={() => navigate('/profile')} className="text-sm text-[#03ccba] hover:underline">
+          Back to Profile
+        </button>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
         {(!selectedConversation || !isMobileView) && (
           <div className={isMobileView && selectedConversation ? 'hidden' : 'w-full md:w-80'}>
             <ChatSidebar
@@ -96,7 +116,6 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Chat Window - Show when conversation selected or on desktop */}
         {selectedConversation ? (
           <div className="flex-1">
             <ChatWindow
@@ -110,12 +129,10 @@ export default function ChatPage() {
             <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
               <div className="text-center">
                 <div className="w-24 h-24 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <span className="text-5xl">💬</span>
+                  <span className="text-5xl">Chat</span>
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">Chưa chọn cuộc trò chuyện</h2>
-                <p className="text-gray-600 text-lg">
-                  Chọn cuộc trò chuyện hoặc chờ thông báo mới
-                </p>
+                <p className="text-gray-600 text-lg">Chọn cuộc trò chuyện hoặc chờ thông báo mới</p>
               </div>
             </div>
           )

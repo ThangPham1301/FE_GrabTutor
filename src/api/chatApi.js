@@ -1,33 +1,30 @@
+// src/api/chatApi.js
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8080';
+const DEBUG = true;
 
-const api = axios.create({
-  baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' }
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// ✅ WebSocket Connection Manager
+// GLOBAL WebSocket
 let wsConnection = null;
+let connectionState = 'DISCONNECTED';
 let wsListeners = {};
 let reconnectAttempts = 0;
+let heartbeatInterval = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
-
-const DEBUG = true;
-let connectionState = 'DISCONNECTED';
+const RECONNECT_INTERVAL = 3000;
+const HEARTBEAT_INTERVAL = 30000;
 
 const chatApi = {
-  // ✅ Kết nối WebSocket với retry logic
+  // ✅ CONNECT WEBSOCKET
   connectWebSocket: async () => {
     return new Promise((resolve, reject) => {
+      // Prevent duplicate connections
+      if (wsConnection && (wsConnection.readyState === WebSocket.OPEN || wsConnection.readyState === WebSocket.CONNECTING)) {
+        if (DEBUG) console.log('🔌 [WS] Already connected/connecting, reusing...');
+        if (wsConnection.readyState === WebSocket.OPEN) resolve({ success: true });
+        return;
+      }
+
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -36,338 +33,433 @@ const chatApi = {
           return;
         }
 
-        // ✅ Check if already connected
-        if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-          if (DEBUG) console.log('✅ [WS] Already connected, reusing connection');
-          resolve(wsConnection);
-          return;
+        if (DEBUG) console.log('📡 [WS] Attempting to connect...');
+
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsurl = `${protocol}//localhost:8888/ws/chat?token=${token}`;
+
+        if (DEBUG) {
+          console.log('🔌 WebSocket URL:', wsurl);
+          console.log('   - Protocol:', protocol);
+          console.log('   - Token exists:', !!token);
         }
 
-        connectionState = 'CONNECTING';
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//localhost:8888/ws/chat?token=${token}`;
-        
-        if (DEBUG) console.log('🔌 [WS] Connecting to:', wsUrl);
+        wsConnection = new WebSocket(wsurl);
 
-        wsConnection = new WebSocket(wsUrl);
-        wsConnection.binaryType = 'arraybuffer';
+        const timeout = setTimeout(() => {
+          if (wsConnection.readyState !== WebSocket.OPEN) {
+            console.error('❌ [WS] Connection timeout (5s)');
+            wsConnection.close();
+            reject(new Error('WebSocket connection timeout'));
+          }
+        }, 5000);
 
         wsConnection.onopen = () => {
-          if (DEBUG) console.log('✅ [WS] Connection opened');
-          if (DEBUG) console.log('✅ [WS] Ready state:', wsConnection.readyState);
-          reconnectAttempts = 0;
+          clearTimeout(timeout);
           connectionState = 'CONNECTED';
-          resolve(wsConnection);
+          reconnectAttempts = 0;
+          if (DEBUG) console.log('✅ [WS] Connected successfully');
+          chatApi.startHeartbeat();
+          resolve({ success: true });
         };
 
         wsConnection.onmessage = (event) => {
           try {
-            if (DEBUG) console.log('📨 [WS] Message received (length:', event.data.length, ')');
-            
-            const message = JSON.parse(event.data);
-            
-            if (DEBUG) console.log('📨 [WS] Parsed message:', {
-              type: message.type,
-              roomId: message.roomId,
-              userId: message.userId,
-            });
-            
-            // ✅ Add error handling for undefined message
-            if (!message || !message.roomId) {
-              console.warn('⚠️ [WS] Invalid message format, skipping');
+            const data = JSON.parse(event.data);
+            if (DEBUG) console.log('📨 [WS] Received:', data.type);
+
+            // Ignore PONG
+            if (data.type === 'PONG') {
+              if (DEBUG) console.log('💓 [WS] Pong received');
               return;
             }
-            
-            // ✅ Trigger listeners for room
-            if (wsListeners[message.roomId]) {
-              if (DEBUG) console.log('📢 [WS] Triggering listener for room:', message.roomId);
-              try {
-                wsListeners[message.roomId](message);
-              } catch (callbackError) {
-                console.error('❌ [WS] Error in message callback:', callbackError);
-              }
+
+            // Trigger listeners
+            if (data.type === 'MESSAGE') {
+              wsListeners['message']?.(data);
+            } else if (data.type === 'NOTIFICATION') {
+              wsListeners['notification']?.(data);
+            } else if (data.type === 'ACK') {
+              wsListeners['ack']?.(data);
             } else {
-              if (DEBUG) console.warn('⚠️ [WS] No listener for room:', message.roomId);
-              if (DEBUG) console.log('📋 [WS] Available rooms:', Object.keys(wsListeners));
+              wsListeners['update']?.(data);
             }
-          } catch (error) {
-            console.error('❌ [WS] Error parsing message:', error);
-            if (DEBUG) console.error('Raw data:', event.data);
-            // ✅ Don't throw - continue accepting messages
+          } catch (err) {
+            console.error('❌ [WS] Parse error:', err);
           }
         };
 
         wsConnection.onerror = (error) => {
-          console.error('❌ [WS] WebSocket error:', error);
-          connectionState = 'DISCONNECTED';
-          
-          // ✅ Ignore "disconnected port object" errors from DevTools
-          if (error.message?.includes('disconnected port')) {
-            console.warn('⚠️ DevTools extension error - ignoring');
-            return;
-          }
-          
-          if (DEBUG) console.error('Error details:', {
-            code: error.code,
-            reason: error.reason,
-            message: error.message,
-            readyState: wsConnection?.readyState
-          });
-          // Don't reject - just log
+          clearTimeout(timeout);
+          connectionState = 'ERROR';
+          console.error('❌ [WS] Error:', error);
+          reject(error);
         };
 
         wsConnection.onclose = (event) => {
+          clearTimeout(timeout);
           connectionState = 'DISCONNECTED';
-          console.log('🔌 [WS] Connection closed');
-          if (DEBUG) console.log('Close details:', {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean,
-            description: getCloseCodeDescription(event.code)
-          });
-          
-          // ✅ FIX: Don't nullify wsConnection immediately
-          // wsConnection = null; // ← REMOVE THIS
-          
-          // ✅ Auto-reconnect if closed abnormally
-          if (!event.wasClean && event.code !== 1000) {
-            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-              reconnectAttempts++;
-              const delay = 2000 * reconnectAttempts;
-              if (DEBUG) console.log(`🔄 [WS] Reconnecting in ${delay}ms (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-              setTimeout(() => {
-                wsConnection = null; // Clear here instead
-                chatApi.connectWebSocket().catch(err => console.error('Reconnect failed:', err));
-              }, delay);
-            } else {
-              console.error('❌ [WS] Max reconnect attempts reached');
-              wsConnection = null;
-            }
+          chatApi.stopHeartbeat();
+          console.log(`❌ [WS] Disconnected (code: ${event.code})`);
+
+          // Auto-reconnect
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            console.log(`🔄 [WS] Reconnecting... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+            setTimeout(() => chatApi.connectWebSocket().catch(console.error), RECONNECT_INTERVAL);
           }
         };
-
-        // Timeout after 10 seconds
-        setTimeout(() => {
-          if (wsConnection && wsConnection.readyState !== WebSocket.OPEN) {
-            console.error('❌ [WS] Connection timeout after 10s');
-            wsConnection.close();
-            reject(new Error('WebSocket connection timeout'));
-          }
-        }, 10000);
-
       } catch (error) {
-        console.error('❌ [WS] connectWebSocket error:', error);
-        connectionState = 'DISCONNECTED';
+        console.error('❌ [WS] Exception:', error);
         reject(error);
       }
     });
   },
 
-  // ✅ Lắng nghe messages từ một room
-  onRoomMessage: (roomId, callback) => {
-    if (DEBUG) console.log('📝 [WS] Setting up listener for room:', roomId);
-    wsListeners[roomId] = callback;
-    if (DEBUG) console.log('📝 [WS] Active listeners:', Object.keys(wsListeners));
-  },
-
-  // ✅ Gửi tin nhắn (text + file) qua WebSocket
-  sendMessage: async (roomId, messageData) => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        if (DEBUG) console.log('📤 [WS] sendMessage called for room:', roomId);
-        
-        // ✅ FIX: Ensure connection exists and is open before sending
-        if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
-          if (DEBUG) console.log('⚠️ [WS] Connection not ready, initializing...');
-          
-          try {
-            await chatApi.connectWebSocket();
-            if (DEBUG) console.log('✅ [WS] Reconnected successfully');
-          } catch (error) {
-            console.error('❌ [WS] Failed to reconnect:', error.message);
-            reject(new Error('WebSocket connection failed'));
-            return;
-          }
+  // ✅ HEARTBEAT - Keep connection alive
+  startHeartbeat: () => {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    
+    heartbeatInterval = setInterval(() => {
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        try {
+          wsConnection.send(JSON.stringify({ type: 'PING' }));
+          if (DEBUG) console.log('💓 [WS] Ping sent');
+        } catch (err) {
+          console.error('❌ [WS] Error sending PING:', err);
         }
-
-        if (DEBUG) console.log('📤 [WS] Ready state:', wsConnection.readyState, '(1=OPEN)');
-
-        if (wsConnection.readyState !== WebSocket.OPEN) {
-          console.error('❌ [WS] Connection still not OPEN (state:', wsConnection.readyState + ')');
-          reject(new Error(`WebSocket not ready (state: ${wsConnection.readyState})`));
-          return;
-        }
-
-        // ✅ Prepare message
-        let message = {
-          type: 'MESSAGE',
-          roomId: roomId,
-          content: messageData.content || '',
-          fileName: messageData.fileName || null,
-          fileType: messageData.fileType || null,
-          fileSize: messageData.fileSize || null,
-          fileData: messageData.fileData || null
-        };
-
-        const jsonStr = JSON.stringify(message);
-        if (DEBUG) console.log('📤 [WS] Message payload:', {
-          type: message.type,
-          roomId: message.roomId,
-          contentLength: message.content.length,
-          hasFile: !!message.fileName,
-          totalSize: jsonStr.length
-        });
-
-        wsConnection.send(jsonStr);
-        
-        if (DEBUG) console.log('✅ [WS] Message sent successfully');
-        resolve({ success: true, sent: true });
-        
-      } catch (error) {
-        console.error('❌ [WS] sendMessage error:', error.message);
-        reject(error);
       }
-    });
+    }, HEARTBEAT_INTERVAL);
   },
 
-  // ✅ Ngắt kết nối WebSocket
+  stopHeartbeat: () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+      if (DEBUG) console.log('⏹️ [WS] Heartbeat stopped');
+    }
+  },
+
+  // ✅ DISCONNECT
   disconnectWebSocket: () => {
-    if (DEBUG) console.log('🔌 [WS] Disconnecting...');
+    chatApi.stopHeartbeat();
     if (wsConnection) {
       wsConnection.close();
       wsConnection = null;
+      connectionState = 'DISCONNECTED';
+      if (DEBUG) console.log('✅ [WS] Disconnected manually');
     }
-    wsListeners = {};
-    connectionState = 'DISCONNECTED';
   },
 
-  // ✅ Get current connection state
-  getConnectionState: () => connectionState,
+  // ✅ JOIN ROOM
+  joinRoom: async (roomId) => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (DEBUG) console.log('🚪 [WS] Joining room:', roomId);
 
-  // ✅ Lấy rooms của user hiện tại
-  getConversations: async (pageNo = 0, pageSize = 50) => {
-    try {
-      if (DEBUG) console.log('=== getConversations START ===');
-      
-      const response = await api.get(`/grabtutor/room/myRooms`);
-      
-      if (DEBUG) console.log('Response:', response.data);
-      
-      let items = [];
-      if (response.data?.data?.rooms && Array.isArray(response.data.data.rooms)) {
-        items = response.data.data.rooms;
-      } else if (response.data?.rooms && Array.isArray(response.data.rooms)) {
-        items = response.data.rooms;
-      } else if (Array.isArray(response.data?.data)) {
-        items = response.data.data;
+        if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+          reject(new Error('WebSocket not connected'));
+          return;
+        }
+
+        const joinMessage = {
+          type: 'JOIN',
+          roomId: roomId
+        };
+
+        wsConnection.send(JSON.stringify(joinMessage));
+        if (DEBUG) console.log('✅ [WS] JOIN message sent');
+        resolve({ success: true });
+      } catch (error) {
+        reject(error);
       }
-      
-      if (DEBUG) console.log('✅ Loaded rooms:', items.length);
-      return items;
-    } catch (error) {
-      if (DEBUG) console.error('❌ getConversations error:', error.response?.data || error.message);
-      return [];
-    }
+    });
   },
 
-  // ✅ Lấy room cụ thể bằng room ID
+  // ✅ SEND MESSAGE - Match script.js exactly
+  sendMessage: async (roomId, messageData) => {
+    if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket not connected');
+    }
+
+    let fileUrl = null;
+    let fileName = null;
+
+    // Upload file nếu có - ✅ KHÔNG gửi Authorization header
+    if (messageData.file) {
+      try {
+        const formData = new FormData();
+        formData.append('file', messageData.file);
+
+        const uploadResponse = await fetch(`${BASE_URL}/grabtutor/upload`, {
+          method: 'POST',
+          // ✅ KHÔNG set headers - let browser handle FormData
+          body: formData
+        });
+
+        if (!uploadResponse.ok) throw new Error('Upload failed');
+        const uploadData = await uploadResponse.json();
+        
+        // ✅ Match script.js: try 3 formats
+        fileUrl = uploadData?.data?.fileUrl || uploadData?.fileUrl || uploadData?.url;
+        fileName = messageData.file.name;
+        
+        if (DEBUG) console.log('✅ [WS] File uploaded:', fileUrl);
+      } catch (error) {
+        console.error('❌ [WS] File upload error:', error);
+        throw error;
+      }
+    }
+
+    // ✅ SEND MESSAGE - Always include all fields like script.js
+    const payload = {
+      userId: messageData.userId || localStorage.getItem('userId'),
+      roomId: roomId,
+      type: 'MESSAGE',
+      message: messageData.message || messageData.content || '',
+      fileName: fileName,  // ✅ Always include (even if null)
+      fileUrl: fileUrl     // ✅ Always include (even if null)
+    };
+
+    if (DEBUG) {
+      console.log('📤 [WS] Final payload:', payload);
+      console.log('   - Message field:', payload.message);
+      console.log('   - FileName:', payload.fileName);
+      console.log('   - FileUrl:', payload.fileUrl);
+    }
+
+    wsConnection.send(JSON.stringify(payload));
+    if (DEBUG) console.log('✅ [WS] Message sent via WebSocket');
+  },
+
+  // ✅ REGISTER LISTENERS
+  onMessage: (callback) => {
+    wsListeners['message'] = callback;
+  },
+
+  onNotification: (callback) => {
+    wsListeners['notification'] = callback;
+  },
+
+  onUpdate: (callback) => {
+    wsListeners['update'] = callback;
+  },
+
+  onAck: (callback) => {
+    wsListeners['ack'] = callback;
+  },
+
+  // ✅ API CALLS - Dùng FETCH thay vì AXIOS
+  
   getRoomById: async (roomId) => {
     try {
-      if (DEBUG) console.log('=== getRoomById START ===');
-      if (DEBUG) console.log('roomId:', roomId);
-      
-      const response = await api.get(`/grabtutor/room/myRooms`);
-      
-      let rooms = [];
-      if (response.data?.data?.rooms && Array.isArray(response.data.data.rooms)) {
-        rooms = response.data.data.rooms;
-      } else if (Array.isArray(response.data?.data)) {
-        rooms = response.data.data;
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('🔍 [API] Fetching room:', roomId);
+
+      const response = await fetch(`${BASE_URL}/grabtutor/room/${roomId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
-      
-      const room = rooms.find(r => r.id === roomId);
-      
-      if (!room) {
-        throw new Error('Room not found');
-      }
-      
-      if (DEBUG) console.log('✅ Room found:', room);
-      return room;
+
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Room:', data);
+      return data?.data || data;
     } catch (error) {
-      if (DEBUG) console.error('❌ getRoomById error:', error.response?.data || error.message);
+      console.error('❌ [API] Error fetching room:', error);
+      throw error;
+    }
+  },
+getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token');
+
+    const response = await fetch(
+      `${BASE_URL}/grabtutor/room/message?roomId=${roomId}&pageNo=${pageNo}&pageSize=${pageSize}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    const messages = data?.data?.messages || data?.messages || [];
+    
+    // Return messages without transformation - keep backend field names
+    return messages.map(msg => ({
+      id: msg.id,
+      userId: msg.userId,
+      email: msg.email,
+      message: msg.message,  // Keep as "message", not "content"
+      fileUrl: msg.fileUrl,
+      fileName: msg.fileName,
+      createdAt: msg.createdAt,
+    }));
+  } catch (error) {
+    console.error('getMessages ERROR:', error);
+    return [];
+  }
+},
+  getConversations: async (pageNo = 0, pageSize = 50) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('💬 [API] Fetching conversations...');
+
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/myRooms?pageNo=${pageNo}&pageSize=${pageSize}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rooms = data?.data?.rooms || data?.data || data;
+      if (DEBUG) console.log('✅ [API] Conversations:', rooms);
+      return rooms;
+    } catch (error) {
+      console.error('❌ [API] Error fetching conversations:', error);
       throw error;
     }
   },
 
-  // ✅ Lấy tin nhắn từ REST API (lịch sử)
-  getMessages: async (roomId, pageNo = 0, pageSize = 50) => {
-    try {
-      if (DEBUG) console.log('=== getMessages START ===');
-      
-      const response = await api.get(
-        `/grabtutor/room/message?roomId=${roomId}&pageNo=${pageNo}&pageSize=${pageSize}`
-      );
-      
-      if (DEBUG) console.log('Messages response:', response.data);
-      
-      let messages = [];
-      if (response.data?.data?.messages && Array.isArray(response.data.data.messages)) {
-        messages = response.data.data.messages;
-      } else if (response.data?.messages && Array.isArray(response.data.messages)) {
-        messages = response.data.messages;
-      } else if (Array.isArray(response.data?.data)) {
-        messages = response.data.data;
-      }
-      
-      if (DEBUG) console.log(`✅ Loaded ${messages.length} messages`);
-      return messages;
-    } catch (error) {
-      if (DEBUG) console.error('❌ getMessages error:', error.response?.data || error.message);
-      return [];
-    }
-  },
-
-  // ✅ Delete conversation
   deleteConversation: async (roomId) => {
     try {
-      if (DEBUG) console.log('=== deleteConversation START ===');
-      if (DEBUG) console.log('roomId:', roomId);
-      
-      const response = await api.delete(
-        `/grabtutor/room/${roomId}`
-      ).catch(err => {
-        console.warn('Delete room endpoint not found, returning success');
-        return { data: { success: true } };
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('🗑️ [API] Deleting room:', roomId);
+
+      const response = await fetch(`${BASE_URL}/grabtutor/room/${roomId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-      
-      if (DEBUG) console.log('✅ deleteConversation response:', response.data);
-      return response.data?.data || response.data;
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Room deleted');
+      return data;
     } catch (error) {
-      console.error('❌ deleteConversation error:', error.response?.data || error.message);
+      console.error('❌ [API] Error deleting room:', error);
       throw error;
     }
-  }
-};
+  },
 
-// ✅ Helper function to describe WebSocket close codes
-function getCloseCodeDescription(code) {
-  const codes = {
-    1000: 'Normal closure',
-    1001: 'Going away',
-    1002: 'Protocol error',
-    1003: 'Unsupported data',
-    1006: 'Abnormal closure (connection lost)',
-    1007: 'Invalid frame payload',
-    1008: 'Policy violation',
-    1009: 'Message too big',
-    1010: 'Mandatory extension',
-    1011: 'Internal error',
-    1012: 'Service restart',
-    1013: 'Try again later',
-    1014: 'Bad gateway',
-    1015: 'TLS handshake failure'
-  };
-  return codes[code] || `Unknown code: ${code}`;
-}
+  getOrCreateConversation: async (postId, tutorBidId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('🏠 [API] Getting/creating conversation...');
+
+      const response = await fetch(`${BASE_URL}/grabtutor/room/confirm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ postId, tutorBidId })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Conversation:', data);
+      return data?.data || data;
+    } catch (error) {
+      console.error('❌ [API] Error getting/creating conversation:', error);
+      throw error;
+    }
+  },
+
+  // ✅ DELETE A SINGLE MESSAGE
+  deleteMessage: async (roomId, messageId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('🗑️ [API] Deleting message:', messageId);
+
+      // ✅ FIX: Backend endpoint format
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/message?messageId=${messageId}`,  // ← Đúng format
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Message deleted');
+      return data;
+    } catch (error) {
+      console.error('❌ [API] Error deleting message:', error);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Delete all messages in a room (entire conversation)
+  deleteAllMessages: async (roomId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('🗑️ [API] Deleting all messages in room:', roomId);
+
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/${roomId}/messages`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] All messages deleted');
+      return data;
+    } catch (error) {
+      console.error('❌ [API] Error deleting all messages:', error);
+      throw error;
+    }
+  },
+
+  // ✅ GETTERS
+  getConnectionState: () => connectionState,
+  isConnected: () => connectionState === 'CONNECTED',
+  getGlobalConnection: () => wsConnection,
+};
 
 export default chatApi;

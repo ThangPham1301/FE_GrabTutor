@@ -45,6 +45,14 @@ export default function Navbar() {
     }
   };
 
+  const handleChatNavigation = () => {
+    if (!user) {
+      navigate('/login');
+    } else {
+      navigate('/chat');
+    }
+  };
+
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,6 +115,15 @@ export default function Navbar() {
                   <FaBook size={18} />
                   My Learning
                 </button>
+
+                <button
+                  onClick={handleChatNavigation}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                  title="Messages"
+                >
+                  <FaComments size={18} />
+                  <span className="hidden sm:inline">Chat</span>
+                </button>
               </>
             )}
 
@@ -141,6 +158,15 @@ export default function Navbar() {
                       <FaPlus size={16} />
                       New Course
                     </button>
+
+                    <button
+                      onClick={handleChatNavigation}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                      title="Messages"
+                    >
+                      <FaComments size={18} />
+                      <span className="hidden sm:inline">Chat</span>
+                    </button>
                   </>
                 )}
 
@@ -158,9 +184,8 @@ export default function Navbar() {
                       My Posts
                     </button>
 
-                    {/* ✅ Chat Button */}
                     <button
-                      onClick={() => navigate('/chat')}
+                      onClick={handleChatNavigation}
                       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
                       title="Messages"
                     >
@@ -385,6 +410,16 @@ export default function Navbar() {
                 >
                   My Learning
                 </button>
+
+                <button
+                  onClick={() => {
+                    handleChatNavigation();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                >
+                  💬 Chat
+                </button>
               </>
             )}
 
@@ -412,6 +447,16 @@ export default function Navbar() {
                     >
                       My Courses
                     </button>
+
+                    <button
+                      onClick={() => {
+                        handleChatNavigation();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                    >
+                      Chat
+                    </button>
                   </>
                 )}
 
@@ -423,6 +468,16 @@ export default function Navbar() {
                       className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
                     >
                       My Posts
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        handleChatNavigation();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                    >
+                      Chat
                     </button>
                   </>
                 )}

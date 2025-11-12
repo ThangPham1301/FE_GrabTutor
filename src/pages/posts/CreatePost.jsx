@@ -316,20 +316,12 @@ export default function CreatePost() {
 
                     {/* ✅ Action Buttons - Always Visible at Bottom */}
                     <div className="flex gap-2 mt-auto">
+                      {/* ✅ FIX: Pass postId to URL */}
                       <button
                         onClick={() => navigate(`/posts/${post.id}`)}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold text-sm"
                       >
                         View Details
-                      </button>
-
-                      {/* ✅ Report Button - Cho tất cả user (kể cả chưa login) */}
-                      <button
-                        onClick={() => navigate(`/posts/${post.id}/report`)}
-                        className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-sm font-semibold flex items-center gap-2"
-                        title="Report this post"
-                      >
-                        <FaFlag size={14} /> Report
                       </button>
                     </div>
                   </div>

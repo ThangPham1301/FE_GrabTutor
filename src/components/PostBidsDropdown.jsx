@@ -3,7 +3,6 @@ import { FaChevronDown, FaBook, FaCheckCircle, FaClock, FaTimesCircle, FaCheck, 
 import postApi from '../api/postApi';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import chatApi from '../api/chatApi';
 
 export default function PostBidsDropdown() {
   const navigate = useNavigate();
