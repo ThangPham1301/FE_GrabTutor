@@ -36,12 +36,28 @@ const chatApi = {
         if (DEBUG) console.log('📡 [WS] Attempting to connect...');
 
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsurl = `${protocol}//localhost:8888/ws/chat?token=${token}`;
+        const wsurl = `${protocol}//localhost:8888/ws/chat?token=${encodeURIComponent(token)}`;
 
         if (DEBUG) {
-          console.log('🔌 WebSocket URL:', wsurl);
+          console.log('🔌 [WS] WebSocket URL:', wsurl);
           console.log('   - Protocol:', protocol);
-          console.log('   - Token exists:', !!token);
+          console.log('   - Hostname: localhost:8888');
+          console.log('   - Path: /ws/chat');
+          console.log('   - Token:', token.substring(0, 50) + '...');
+          
+          // ✅ NEW - Test if backend API is reachable
+          console.log('🧪 [WS] Testing backend connectivity...');
+          fetch('http://localhost:8080/grabtutor/users/myInfo', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          .then(r => {
+            if (r.ok) {
+              console.log('✅ [WS] Backend API is reachable');
+            } else {
+              console.error('❌ [WS] Backend returned:', r.status);
+            }
+          })
+          .catch(err => console.error('❌ [WS] Backend unreachable:', err));
         }
 
         wsConnection = new WebSocket(wsurl);
@@ -49,8 +65,11 @@ const chatApi = {
         const timeout = setTimeout(() => {
           if (wsConnection.readyState !== WebSocket.OPEN) {
             console.error('❌ [WS] Connection timeout (5s)');
+            console.error('   - readyState:', wsConnection.readyState);
+            console.error('   - Expected: 1 (OPEN)');
+            console.error('   - Check: Is backend WebSocket server running on port 8888?');
             wsConnection.close();
-            reject(new Error('WebSocket connection timeout'));
+            reject(new Error('WebSocket connection timeout - Backend server not responding'));
           }
         }, 5000);
 
@@ -58,8 +77,7 @@ const chatApi = {
           clearTimeout(timeout);
           connectionState = 'CONNECTED';
           reconnectAttempts = 0;
-          if (DEBUG) console.log('✅ [WS] Connected successfully');
-          chatApi.startHeartbeat();
+          if (DEBUG) console.log('✅ [WS] Connected successfully!');
           resolve({ success: true });
         };
 
@@ -92,25 +110,44 @@ const chatApi = {
         wsConnection.onerror = (error) => {
           clearTimeout(timeout);
           connectionState = 'ERROR';
-          console.error('❌ [WS] Error:', error);
+          console.error('❌ [WS] WebSocket Error:');
+          console.error('   - Type:', error.type);
+          console.error('   - Message:', error.message);
+          console.error('   - Check: Backend WebSocket endpoint running?');
           reject(error);
         };
 
         wsConnection.onclose = (event) => {
           clearTimeout(timeout);
           connectionState = 'DISCONNECTED';
-          chatApi.stopHeartbeat();
-          console.log(`❌ [WS] Disconnected (code: ${event.code})`);
+          
+          console.log('❌ [WS] Connection Closed');
+          console.log('   - Code:', event.code);
+          console.log('   - Reason:', event.reason || 'No reason provided');
+          console.log('   - Was Clean:', event.wasClean);
+          
+          const closeCodeMeaning = {
+            1000: 'Normal closure',
+            1001: 'Going away',
+            1002: 'Protocol error',
+            1006: 'Abnormal closure (server crash?)',
+            1008: 'Policy violation',
+            4000: 'Custom error',
+            4001: 'Authentication failed'
+          };
+          
+          console.error(`   - Meaning: ${closeCodeMeaning[event.code] || 'Unknown'}`);
 
           // Auto-reconnect
           if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
-            console.log(`🔄 [WS] Reconnecting... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-            setTimeout(() => chatApi.connectWebSocket().catch(console.error), RECONNECT_INTERVAL);
+            const delay = RECONNECT_INTERVAL * Math.pow(1.5, reconnectAttempts - 1);
+            console.log(`🔄 [WS] Retrying in ${Math.round(delay)}ms...`);
+            setTimeout(() => chatApi.connectWebSocket().catch(console.error), delay);
           }
         };
       } catch (error) {
-        console.error('❌ [WS] Exception:', error);
+        console.error('❌ [WS] Exception during setup:', error);
         reject(error);
       }
     });

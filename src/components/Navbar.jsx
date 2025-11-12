@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { FaHome, FaPlus, FaUser, FaKey, FaCoins, FaSignOutAlt, FaBars, FaTimes, FaFolderOpen, FaBook, FaChalkboard, FaStar, FaChartLine, FaWallet, FaHandshake, FaComments } from 'react-icons/fa';
+import { 
+  FaHome, FaPlus, FaUser, FaKey, FaCoins, FaSignOutAlt, FaBars, FaTimes, 
+  FaFolderOpen, FaBook, FaChalkboard, FaStar, FaChartLine, FaWallet, 
+  FaHandshake, FaComments, FaChevronDown, FaBox
+} from 'react-icons/fa';
 import PostBidsDropdown from './PostBidsDropdown';
 
 export default function Navbar() {
@@ -10,29 +14,11 @@ export default function Navbar() {
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    setIsDropdownOpen(false);
-    navigate('/');
-  };
-
-  const getAvatarInitials = () => {
-    if (user?.fullName) {
-      return user.fullName
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return user?.email?.charAt(0).toUpperCase() || 'U';
-  };
-
-  const getAvatarColor = () => {
-    const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500', 'bg-red-500', 'bg-indigo-500'];
-    const charCode = user?.email?.charCodeAt(0) || 0;
-    return colors[charCode % colors.length];
+    navigate('/login-role');
   };
 
   const handleNavigation = () => {
@@ -41,29 +27,38 @@ export default function Navbar() {
     } else if (user.role === 'USER') {
       navigate('/posts');
     } else {
-      alert('⚠️ Only STUDENT can ask questions!');
+      alert('⚠️ Chỉ có STUDENT mới có thể đặt câu hỏi!');
     }
   };
 
-  const handleChatNavigation = () => {
-    if (!user) {
-      navigate('/login');
-    } else {
-      navigate('/chat');
+  const getAvatarColor = () => {
+    const colors = [
+      'bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-red-500',
+      'bg-green-500', 'bg-yellow-500', 'bg-indigo-500', 'bg-cyan-500'
+    ];
+    return colors[Math.abs(user?.id?.charCodeAt(0) || 0) % colors.length];
+  };
+
+  const getAvatarInitials = () => {
+    if (user?.fullName) {
+      return user.fullName.split(' ').map(n => n[0]).join('').toUpperCase();
     }
+    return user?.email?.charAt(0).toUpperCase() || 'U';
   };
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          
           {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="text-3xl font-bold text-[#03ccba]">MyTutor</div>
-          </div>
+          <Link to="/" className="flex items-center gap-2 font-bold text-2xl text-[#03ccba]">
+            🎓 GrabTutor
+          </Link>
 
-          {/* Desktop Menu */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
+            {/* Home */}
             <button
               onClick={() => navigate('/')}
               className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
@@ -81,7 +76,7 @@ export default function Navbar() {
               Browse Posts
             </button>
 
-            {/* Browse Courses - Public Access */}
+            {/* Browse Courses */}
             <button
               onClick={() => navigate('/courses')}
               className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
@@ -89,149 +84,83 @@ export default function Navbar() {
               <FaBook size={18} />
               Browse Courses
             </button>
-
-            {/* Ask Question + Recharge - ONLY FOR USER (STUDENT) */}
+   {/* ✅ THÊM COMPONENT NÀY - Bids Dropdown (STUDENT ONLY) */}
             {user && user.role === 'USER' && (
-              <>
+              <PostBidsDropdown />
+            )}
+            {/* STUDENT ONLY - Inventory Dropdown */}
+            {user && user.role === 'USER' && (
+              <div className="relative group">
                 <button
-                  onClick={handleNavigation}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                >
-                  <FaPlus size={16} />
-                  Ask Question
-                </button>
-
-                <button
-                  onClick={() => navigate('/wallet/recharge')}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                >
-                  <FaWallet size={16} /> Recharge
-                </button>
-
-                <button
-                  onClick={() => navigate('/courses/my-enrolled')}
                   className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
                 >
-                  <FaBook size={18} />
-                  My Learning
+                  <FaBox size={18} />
+                  Inventory
+                  <FaChevronDown size={12} />
                 </button>
 
-                <button
-                  onClick={handleChatNavigation}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                  title="Messages"
-                >
-                  <FaComments size={18} />
-                  <span className="hidden sm:inline">Chat</span>
-                </button>
-              </>
+                {/* Dropdown Menu */}
+                <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top">
+                  {/* Ask Question */}
+                  <button
+                    onClick={() => {
+                      navigate('/posts');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 transition-colors"
+                  >
+                    <FaPlus size={16} className="text-[#03ccba]" />
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">Ask Question</p>
+                      <p className="text-xs text-gray-600">Post your homework questions</p>
+                    </div>
+                  </button>
+
+                  {/* My Posts */}
+                  <button
+                    onClick={() => {
+                      navigate('/posts/inventory');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <FaFolderOpen size={16} className="text-blue-600" />
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">My Posts</p>
+                      <p className="text-xs text-gray-600">View your questions</p>
+                    </div>
+                  </button>
+
+                  {/* My Learning */}
+                  <button
+                    onClick={() => {
+                      navigate('/courses/my-enrolled');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <FaBook size={16} className="text-green-600" />
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">My Learning</p>
+                      <p className="text-xs text-gray-600">Track your courses</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             )}
 
+            {/* Chat */}
+            <button
+              onClick={() => navigate('/chat')}
+              className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
+            >
+              <FaComments size={18} />
+              Chat
+            </button>
+
+            {/* User Menu */}
             {user ? (
               <>
-                {/* ✅ TUTOR - Desktop Menu */}
-                {user.role === 'TUTOR' && (
-                  <>
-                    {/* My Bids */}
-                    <button
-                      onClick={() => navigate('/posts/my-bids')}
-                      className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
-                    >
-                      <FaHandshake size={18} />
-                      My Bids
-                    </button>
-
-                    {/* My Courses Inventory */}
-                    <button
-                      onClick={() => navigate('/courses/inventory')}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                    >
-                      <FaBook size={16} />
-                      My Courses
-                    </button>
-                    
-                    {/* New - Create Course Button */}
-                    <button
-                      onClick={() => navigate('/courses/create')}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-[#03ccba] text-[#03ccba] rounded-lg hover:bg-[#03ccba] hover:text-white transition-all font-semibold"
-                    >
-                      <FaPlus size={16} />
-                      New Course
-                    </button>
-
-                    <button
-                      onClick={handleChatNavigation}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                      title="Messages"
-                    >
-                      <FaComments size={18} />
-                      <span className="hidden sm:inline">Chat</span>
-                    </button>
-                  </>
-                )}
-
-                {/* ✅ STUDENT (USER) - Desktop Menu */}
-                {user.role === 'USER' && (
-                  <>
-                    {/* ✅ NEW - Posts & Bids Dropdown */}
-                    <PostBidsDropdown />
-
-                    <button
-                      onClick={() => navigate('/posts/inventory')}
-                      className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
-                    >
-                      <FaFolderOpen size={18} />
-                      My Posts
-                    </button>
-
-                    <button
-                      onClick={handleChatNavigation}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                      title="Messages"
-                    >
-                      <FaComments size={18} />
-                      <span className="hidden sm:inline">Chat</span>
-                    </button>
-                  </>
-                )}
-
-                {/* ✅ ADMIN - Desktop Menu */}
-                {user.role === 'ADMIN' && (
-                  <>
-                    <button
-                      onClick={() => navigate('/admin/dashboard')}
-                      className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
-                    >
-                      <FaChartLine size={18} />
-                      Dashboard
-                    </button>
-
-                    <button
-                      onClick={() => navigate('/admin/users')}
-                      className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
-                    >
-                      <FaUser size={18} />
-                      Users
-                    </button>
-
-                    <button
-                      onClick={() => navigate('/admin/tutors')}
-                      className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
-                    >
-                      <FaChalkboard size={18} />
-                      Tutors
-                    </button>
-
-                    <button
-                      onClick={() => navigate('/admin/subjects')}
-                      className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium"
-                    >
-                      <FaBook size={18} />
-                      Subjects
-                    </button>
-                  </>
-                )}
-
                 {/* Profile Dropdown */}
                 <div className="relative">
                   <button
@@ -249,7 +178,7 @@ export default function Navbar() {
                         className="fixed inset-0"
                         onClick={() => setIsDropdownOpen(false)}
                       ></div>
-                      
+
                       <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
                         {/* User Info Header */}
                         <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-4">
@@ -260,27 +189,49 @@ export default function Navbar() {
                             <div className="flex-1">
                               <p className="font-bold text-sm">{user.fullName || user.email}</p>
                               <p className="text-xs text-teal-100">{user.email}</p>
-                              <p className="text-xs text-teal-100 font-semibold mt-1">{user.role}</p>
                             </div>
                           </div>
                         </div>
 
                         {/* Menu Items */}
                         <div className="py-2">
+                          {/* Profile */}
                           <button
                             onClick={() => {
-                              navigate('/profile');
+                              if (user.role === 'TUTOR') {
+                                navigate('/profile');
+                              } else {
+                                navigate('/student-profile');
+                              }
                               setIsDropdownOpen(false);
                             }}
                             className="w-full px-4 py-3 flex items-center gap-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
                           >
                             <FaUser className="text-[#03ccba]" size={18} />
                             <div>
-                              <p className="font-semibold text-sm">Profile</p>
-                              <p className="text-xs text-gray-500">View & edit profile</p>
+                              <p className="font-semibold text-sm">My Profile</p>
+                              <p className="text-xs text-gray-500">View your profile</p>
                             </div>
                           </button>
 
+                          {/* ✅ RECHARGE - Now in Dropdown (STUDENT ONLY) */}
+                          {user.role === 'USER' && (
+                            <button
+                              onClick={() => {
+                                navigate('/wallet/recharge');
+                                setIsDropdownOpen(false);
+                              }}
+                              className="w-full px-4 py-3 flex items-center gap-3 text-gray-700 hover:bg-amber-50 transition-colors text-left border-y border-gray-100"
+                            >
+                              <FaWallet className="text-amber-600" size={18} />
+                              <div>
+                                <p className="font-semibold text-sm">💳 Recharge Wallet</p>
+                                <p className="text-xs text-gray-500">Add money to account</p>
+                              </div>
+                            </button>
+                          )}
+
+                          {/* Change Password */}
                           <button
                             onClick={() => {
                               navigate('/change-password');
@@ -297,6 +248,7 @@ export default function Navbar() {
 
                           <div className="border-t border-gray-200 my-2"></div>
 
+                          {/* Logout */}
                           <button
                             onClick={handleLogout}
                             className="w-full px-4 py-3 flex items-center gap-3 text-red-600 hover:bg-red-50 transition-colors text-left font-semibold"
@@ -304,7 +256,7 @@ export default function Navbar() {
                             <FaSignOutAlt size={18} />
                             <div>
                               <p className="font-semibold text-sm">Logout</p>
-                              <p className="text-xs text-gray-500">Sign out from account</p>
+                              <p className="text-xs text-red-500">Sign out from account</p>
                             </div>
                           </button>
                         </div>
@@ -344,7 +296,7 @@ export default function Navbar() {
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-700 hover:text-[#03ccba] transition-colors"
+              className="text-gray-700 hover:text-[#03ccba]"
             >
               {isMobileMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
             </button>
@@ -353,7 +305,7 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden pb-4 border-t border-gray-200">
+          <div className="md:hidden mt-4 space-y-2 pb-4">
             <button
               onClick={() => {
                 navigate('/');
@@ -374,171 +326,85 @@ export default function Navbar() {
               Browse Posts
             </button>
 
-            {/* Browse Courses - Public Access */}
             <button
-              onClick={() => navigate('/courses')}
+              onClick={() => {
+                navigate('/courses');
+                setIsMobileMenuOpen(false);
+              }}
               className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
             >
               Browse Courses
             </button>
 
+            {/* Mobile Inventory */}
             {user && user.role === 'USER' && (
               <>
                 <button
-                  onClick={() => {
-                    handleNavigation();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-[#03ccba] font-bold"
+                  onClick={() => setIsInventoryOpen(!isInventoryOpen)}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium flex items-center justify-between"
                 >
-                  + Ask Question
+                  📦 Inventory
+                  <FaChevronDown size={12} className={`transform transition-transform ${isInventoryOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                <button
-                  onClick={() => {
-                    navigate('/wallet/recharge');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-[#03ccba] font-bold"
-                >
-                  💳 Recharge
-                </button>
-
-                <button
-                  onClick={() => navigate('/courses/my-enrolled')}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                >
-                  My Learning
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleChatNavigation();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                >
-                  💬 Chat
-                </button>
-              </>
-            )}
-
-            {user ? (
-              <>
-                {/* ✅ TUTOR Mobile Menu */}
-                {user.role === 'TUTOR' && (
+                {isInventoryOpen && (
                   <>
                     <button
                       onClick={() => {
-                        navigate('/posts/my-bids');
+                        navigate('/posts');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                      className="block w-full text-left px-8 py-2 text-sm text-gray-600 hover:text-[#03ccba] transition-colors"
                     >
-                      My Bids
+                      + Ask Question
                     </button>
-
                     <button
                       onClick={() => {
-                        navigate('/courses/inventory');
+                        navigate('/posts/inventory');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                    >
-                      My Courses
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        handleChatNavigation();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                    >
-                      Chat
-                    </button>
-                  </>
-                )}
-
-                {/* ✅ STUDENT Mobile Menu */}
-                {user.role === 'USER' && (
-                  <>
-                    <button
-                      onClick={() => navigate('/posts/inventory')}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                      className="block w-full text-left px-8 py-2 text-sm text-gray-600 hover:text-[#03ccba] transition-colors"
                     >
                       My Posts
                     </button>
-
                     <button
                       onClick={() => {
-                        handleChatNavigation();
+                        navigate('/courses/my-enrolled');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                      className="block w-full text-left px-8 py-2 text-sm text-gray-600 hover:text-[#03ccba] transition-colors"
                     >
-                      Chat
+                      My Learning
                     </button>
                   </>
                 )}
+              </>
+            )}
 
-                {/* ✅ ADMIN Mobile Menu */}
-                {user.role === 'ADMIN' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        navigate('/admin/dashboard');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                    >
-                      Dashboard
-                    </button>
+            <button
+              onClick={() => {
+                navigate('/chat');
+                setIsMobileMenuOpen(false);
+              }}
+              className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+            >
+              Chat
+            </button>
 
-                    <button
-                      onClick={() => {
-                        navigate('/admin/users');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                    >
-                      Users
-                    </button>
+            {user && user.role === 'USER' && (
+              <button
+                onClick={() => {
+                  navigate('/wallet/recharge');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-[#03ccba] font-bold"
+              >
+                💳 Recharge
+              </button>
+            )}
 
-                    <button
-                      onClick={() => {
-                        navigate('/admin/tutors');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                    >
-                      Tutors
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        navigate('/admin/subjects');
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                    >
-                      Subjects
-                    </button>
-                  </>
-                )}
-
-                <div className="border-t border-gray-200 my-2"></div>
-
-                <button
-                  onClick={() => {
-                    navigate('/profile');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                >
-                  Profile
-                </button>
-
+            {user && (
+              <>
                 <button
                   onClick={() => {
                     navigate('/change-password');
@@ -559,7 +425,9 @@ export default function Navbar() {
                   Logout
                 </button>
               </>
-            ) : (
+            )}
+
+            {!user && (
               <>
                 <button
                   onClick={() => {
@@ -582,13 +450,6 @@ export default function Navbar() {
               </>
             )}
           </div>
-        )}
-
-        {isDropdownOpen && (
-          <div
-            className="fixed inset-0"
-            onClick={() => setIsDropdownOpen(false)}
-          ></div>
         )}
       </div>
     </nav>

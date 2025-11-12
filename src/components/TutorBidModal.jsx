@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { FaTimes, FaCheck, FaExclamationCircle } from 'react-icons/fa';
+import { FaTimes, FaCheck, FaExclamationCircle, FaSpinner } from 'react-icons/fa';
 import postApi from '../api/postApi';
+
+const DEBUG = true;
 
 export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
   const [formData, setFormData] = useState({
@@ -10,6 +12,10 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  if (!isOpen) return null;
+  if (!post) return null;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -17,24 +23,75 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError(null);
+  };
+
+  const validateForm = () => {
+    // Reset success message
+    setSuccess(false);
+
+    // Check post
+    if (!post || !post.id) {
+      setError('❌ Post information is missing');
+      return false;
+    }
+
+    // Check price
+    const priceStr = formData.proposedPrice?.toString().trim();
+    if (!priceStr) {
+      setError('❌ Please enter proposed price');
+      return false;
+    }
+
+    const price = parseFloat(priceStr);
+    if (isNaN(price)) {
+      setError('❌ Price must be a valid number');
+      return false;
+    }
+
+    if (price <= 0) {
+      setError('❌ Price must be greater than 0');
+      return false;
+    }
+
+    if (price < 50000) {
+      setError('❌ Minimum price is 50,000 VNĐ');
+      return false;
+    }
+
+    // Check description
+    const descStr = formData.description?.toString().trim();
+    if (!descStr) {
+      setError('❌ Please enter description');
+      return false;
+    }
+
+    if (descStr.length < 10) {
+      setError('❌ Description must be at least 10 characters');
+      return false;
+    }
+
+    if (descStr.length > 500) {
+      setError('❌ Description must be less than 500 characters');
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.proposedPrice.trim()) {
-      setError('Please enter proposed price');
-      return;
+    if (DEBUG) {
+      console.log('=== Submit Bid START ===');
+      console.log('formData:', formData);
+      console.log('post:', post);
     }
 
-    if (isNaN(formData.proposedPrice) || parseFloat(formData.proposedPrice) <= 0) {
-      setError('Proposed price must be a valid positive number');
-      return;
-    }
-
-    if (!formData.description.trim()) {
-      setError('Please enter a description');
+    // Validate
+    if (!validateForm()) {
+      if (DEBUG) console.log('❌ Validation failed');
       return;
     }
 
@@ -43,67 +100,73 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
 
     try {
       const bidData = {
-        proposedPrice: formData.proposedPrice,
+        proposedPrice: parseFloat(formData.proposedPrice),
         questionLevel: formData.questionLevel,
-        description: formData.description,
+        description: formData.description.trim(),
         postId: post.id
       };
 
-      console.log('Submitting bid:', bidData);
+      if (DEBUG) console.log('Submitting bid:', bidData);
 
-      await postApi.tutorBid(bidData);
+      const response = await postApi.tutorBid(bidData);
 
-      alert('✅ Bid submitted successfully!');
-      onSuccess?.();
-      onClose();
+      if (DEBUG) console.log('✅ Response:', response);
 
-      // Reset form
+      setSuccess(true);
       setFormData({
         proposedPrice: '',
         questionLevel: 'MEDIUM',
         description: ''
       });
+
+      // Show success message
+      alert('✅ Bid submitted successfully!');
+
+      // Call success callback
+      onSuccess?.();
+
+      // Close modal after 1 second
+      setTimeout(() => {
+        onClose();
+      }, 1000);
     } catch (err) {
-      console.error('Error submitting bid:', err);
-      
-      // ✅ NEW - Handle specific error messages
-      const errorMessage = err.response?.data?.message || err.message || 'Error submitting bid';
-      
-      // Map backend error messages to user-friendly Vietnamese messages
+      console.error('❌ Error:', err);
+
+      const errorMsg = err.response?.data?.message || err.message || 'Error submitting bid';
+
       const errorMap = {
-        'Post already accepted': '❌ Bài đăng này đã được nhận rồi',
-        'Post not found': '❌ Bài đăng không tồn tại',
-        'Unauthorized': '❌ Bạn không có quyền thực hiện hành động này',
-        'Invalid price': '❌ Giá đề xuất không hợp lệ',
-        'Tutor not found': '❌ Gia sư không tồn tại'
+        'already accepted': '❌ This post has already been accepted',
+        'post not found': '❌ Post not found',
+        'unauthorized': '❌ You are not authorized',
+        'invalid price': '❌ Invalid price',
+        'tutor not found': '❌ Tutor not found',
+        'forbidden': '❌ You are not a tutor'
       };
 
-      // Check if error message matches any known errors
-      let displayMessage = errorMessage;
+      let displayError = errorMsg;
       for (const [key, value] of Object.entries(errorMap)) {
-        if (errorMessage.includes(key)) {
-          displayMessage = value;
+        if (errorMsg.toLowerCase().includes(key)) {
+          displayError = value;
           break;
         }
       }
 
-      setError(displayMessage);
+      setError(displayError);
     } finally {
       setLoading(false);
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b-2 border-gray-100 sticky top-0 bg-white">
-          <h2 className="text-2xl font-bold text-gray-900">Accept Post</h2>
+          <h2 className="text-2xl font-bold text-gray-900">🤝 Submit Bid</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={loading}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
             title="Close"
           >
             <FaTimes size={24} className="text-gray-500" />
@@ -112,28 +175,31 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* ✅ NEW - Error Message with Icon */}
+          {/* Success Message */}
+          {success && (
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded flex gap-3">
+              <FaCheck className="text-green-600 flex-shrink-0 text-lg mt-0.5" />
+              <p className="text-sm font-semibold text-green-700">
+                ✅ Bid submitted successfully! Closing...
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && (
-            <div className={`border-l-4 p-4 rounded flex gap-3 ${
-              error.includes('❌')
-                ? 'bg-red-50 border-red-500'
-                : 'bg-yellow-50 border-yellow-500'
-            }`}>
-              <FaExclamationCircle className={`flex-shrink-0 text-lg ${
-                error.includes('❌') ? 'text-red-600' : 'text-yellow-600'
-              }`} />
-              <p className={`text-sm font-semibold ${
-                error.includes('❌') ? 'text-red-700' : 'text-yellow-700'
-              }`}>
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded flex gap-3">
+              <FaExclamationCircle className="text-red-600 flex-shrink-0 text-lg mt-0.5" />
+              <p className="text-sm font-semibold text-red-700">
                 {error}
               </p>
             </div>
           )}
 
-          {/* Post Info - Display Only */}
+          {/* Post Info */}
           <div className="bg-gradient-to-br from-[#03ccba] to-[#02b5a5] text-white rounded-lg p-4">
             <p className="text-xs text-teal-100 font-semibold mb-1">QUESTION</p>
             <h3 className="font-bold text-sm line-clamp-2">{post.title}</h3>
+            <p className="text-xs text-teal-100 mt-2">{post.description?.substring(0, 50)}...</p>
           </div>
 
           {/* Proposed Price */}
@@ -146,13 +212,14 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
               name="proposedPrice"
               value={formData.proposedPrice}
               onChange={handleInputChange}
-              placeholder="Enter your proposed price"
-              min="0"
-              step="1000"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all"
+              placeholder="50000"
+              min="50000"
+              step="10000"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all disabled:bg-gray-100"
+              disabled={loading}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Minimum recommended: 50,000 VNĐ</p>
+            <p className="text-xs text-gray-500 mt-1">💡 Minimum: 50,000 VNĐ</p>
           </div>
 
           {/* Question Level */}
@@ -164,31 +231,35 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
               name="questionLevel"
               value={formData.questionLevel}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all appearance-none bg-white"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white disabled:bg-gray-100"
+              disabled={loading}
             >
               <option value="EASY">Easy</option>
               <option value="MEDIUM">Medium</option>
               <option value="HARD">Hard</option>
               <option value="VERY_HARD">Very Hard</option>
             </select>
-            <p className="text-xs text-gray-500 mt-1">Assess the difficulty level</p>
           </div>
 
           {/* Description */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Description / Approach <span className="text-red-500">*</span>
+              Your Approach / Solution <span className="text-red-500">*</span>
             </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              placeholder="Describe your approach to solve this question..."
-              rows={4}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all resize-none"
+              placeholder="Describe how you would solve this question... (10-500 characters)"
+              rows={5}
+              maxLength={500}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all resize-none disabled:bg-gray-100"
+              disabled={loading}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Explain how you would approach this question</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.description.length}/500 characters
+            </p>
           </div>
 
           {/* Buttons */}
@@ -196,23 +267,30 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold"
+              disabled={loading}
+              className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || success}
               className="flex-1 px-4 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                  Submitting...
+                  <FaSpinner className="animate-spin" size={16} />
+                  <span>Submitting...</span>
+                </>
+              ) : success ? (
+                <>
+                  <FaCheck size={16} />
+                  <span>Submitted!</span>
                 </>
               ) : (
                 <>
-                  <FaCheck /> Submit Bid
+                  <FaCheck size={16} />
+                  <span>Submit Bid</span>
                 </>
               )}
             </button>

@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle, FaClock, FaTimesCircle, FaUser, FaStar, FaPhone, FaEnvelope } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
-import postApi from '../../api/postApi';
+import { 
+  FaArrowLeft, FaCheckCircle, FaClock, FaPhone, FaEnvelope, 
+  FaCheck, FaSpinner
+} from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
+import postApi from '../../api/postApi';
+import notificationApi from '../../api/notificationApi';
 
 export default function TutorBids() {
   const navigate = useNavigate();
   const { postId } = useParams();
   const { user } = useAuth();
+  
   const [bids, setBids] = useState([]);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +45,8 @@ export default function TutorBids() {
       setLoading(true);
       setError(null);
       
-      console.log('=== fetchTutorBids START ===');
-      
       const response = await postApi.getTutorBidsForPost(postId);
       
-      console.log('=== fetchTutorBids SUCCESS ===');
-      console.log('Response:', response);
-
-      // Handle response structure
       let bidsData = [];
       if (response.data && Array.isArray(response.data)) {
         bidsData = response.data;
@@ -57,10 +56,8 @@ export default function TutorBids() {
         bidsData = response;
       }
 
-      console.log('Bids:', bidsData);
       setBids(bidsData);
 
-      // Check if any bid is already accepted
       const acceptedBid = bidsData.find(bid => bid.status === 'ACCEPTED');
       if (acceptedBid) {
         setAcceptedBidId(acceptedBid.id);
@@ -74,34 +71,63 @@ export default function TutorBids() {
     }
   };
 
+  // ✅ ACCEPT BID + SEND NOTIFICATIONS
   const handleAcceptBid = async (bidId) => {
-    if (window.confirm('Are you sure you want to accept this bid? Other bids will be deactivated.')) {
+    if (!window.confirm('Are you sure you want to accept this bid? Other bids will be deactivated.')) return;
+
+    try {
+      setProcessingBidId(bidId);
+      console.log('Accepting bid:', bidId);
+
+      // ✅ Find tutor info
+      const selectedBid = bids.find(b => b.id === bidId);
+      const tutorId = selectedBid?.tutor?.id;
+
+      // ✅ Accept bid
+      await postApi.acceptTutorBid(bidId);
+
+      // ✅ Send notification to TUTOR
       try {
-        setProcessingBidId(bidId);
-        console.log('Accepting bid:', bidId);
-
-        await postApi.acceptTutorBid(bidId);
-
-        alert('✅ Bid accepted successfully!');
-        setAcceptedBidId(bidId);
-        
-        // Refresh bids
-        await fetchTutorBids();
-      } catch (err) {
-        console.error('Error accepting bid:', err);
-        alert('❌ Error accepting bid: ' + (err.response?.data?.message || err.message));
-      } finally {
-        setProcessingBidId(null);
+        await notificationApi.sendNotification(
+          tutorId,
+          `Your bid for "${post.title}" has been ACCEPTED! 🎉`,
+          'BID_ACCEPTED'
+        );
+        console.log('✅ Notification sent to tutor');
+      } catch (notifErr) {
+        console.warn('⚠️ Failed to send tutor notification:', notifErr);
       }
+
+      // ✅ Send notification to STUDENT (self)
+      try {
+        await notificationApi.sendNotification(
+          user.userId || user.id,
+          `You accepted bid from ${selectedBid?.tutor?.fullName} for "${post.title}"`,
+          'BID_ACCEPTED'
+        );
+        console.log('✅ Notification sent to student');
+      } catch (notifErr) {
+        console.warn('⚠️ Failed to send student notification:', notifErr);
+      }
+
+      alert('✅ Bid accepted successfully! Notifications sent.');
+      setAcceptedBidId(bidId);
+      
+      await fetchTutorBids();
+    } catch (err) {
+      console.error('Error accepting bid:', err);
+      alert('❌ Error: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setProcessingBidId(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
         <Navbar />
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#03ccba]"></div>
+        <div className="flex items-center justify-center h-96">
+          <FaSpinner className="animate-spin text-5xl text-[#03ccba]" />
         </div>
       </div>
     );
@@ -111,7 +137,7 @@ export default function TutorBids() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
       <Navbar />
 
-      {/* Header Section */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-12 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
@@ -122,12 +148,11 @@ export default function TutorBids() {
               <FaArrowLeft size={24} />
             </button>
             <div>
-              <h1 className="text-5xl font-bold">Tutor Bids</h1>
-              <p className="text-lg text-teal-100">Review and select the best tutor for your question</p>
+              <h1 className="text-5xl font-bold">🤝 Tutor Bids</h1>
+              <p className="text-lg text-teal-100">Select the best tutor for your question</p>
             </div>
           </div>
 
-          {/* Post Title */}
           {post && (
             <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
               <p className="text-teal-100 text-sm">Question:</p>
@@ -145,19 +170,20 @@ export default function TutorBids() {
           </div>
         )}
 
-        {/* Accepted Bid Notification */}
+        {/* Accepted Notification */}
         {acceptedBidId && (
           <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg mb-6">
             <div className="flex items-center gap-3">
               <FaCheckCircle className="text-green-600 text-lg" />
               <div>
-                <p className="text-green-700 font-semibold">Bid Accepted!</p>
-                <p className="text-green-600 text-sm">You have accepted a bid. Other bids are no longer available.</p>
+                <p className="text-green-700 font-semibold">✅ Bid Accepted!</p>
+                <p className="text-green-600 text-sm">Notifications have been sent to all parties.</p>
               </div>
             </div>
           </div>
         )}
 
+        {/* Bids List */}
         {bids.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
             <FaClock size={64} className="mx-auto mb-4 text-gray-300" />
@@ -204,18 +230,14 @@ export default function TutorBids() {
                       <div className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 ${
                         isAccepted
                           ? 'bg-green-100 text-green-800 border-2 border-green-500'
-                          : bid.status === 'ACCEPTED'
-                          ? 'bg-green-100 text-green-800'
-                          : bid.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {isAccepted ? <FaCheckCircle /> : <FaClock />}
+                        <FaClock />
                         {bid.status || 'PENDING'}
                       </div>
                     </div>
 
-                    {/* Bid Details */}
+                    {/* Bid Details Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 pb-6 border-b-2 border-gray-100">
                       {/* Proposed Price */}
                       <div>
@@ -286,36 +308,38 @@ export default function TutorBids() {
                     )}
 
                     {/* Action Button */}
-                    {!isAccepted && (
-                      <button
-                        onClick={() => handleAcceptBid(bid.id)}
-                        disabled={isDisabled || processingBidId === bid.id}
-                        className={`w-full px-6 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
-                          isDisabled
-                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white hover:shadow-lg'
-                        }`}
-                      >
-                        {processingBidId === bid.id ? (
-                          <>
-                            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                            Accepting...
-                          </>
-                        ) : (
-                          <>
-                            <FaCheckCircle /> Accept Bid
-                          </>
-                        )}
-                      </button>
-                    )}
+                    <div className="flex gap-3">
+                      {!isAccepted && (
+                        <button
+                          onClick={() => handleAcceptBid(bid.id)}
+                          disabled={isDisabled || processingBidId === bid.id}
+                          className={`flex-1 px-6 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
+                            isDisabled
+                              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white hover:shadow-lg'
+                          }`}
+                        >
+                          {processingBidId === bid.id ? (
+                            <>
+                              <FaSpinner className="animate-spin" size={16} />
+                              Accepting...
+                            </>
+                          ) : (
+                            <>
+                              <FaCheck /> Accept Bid
+                            </>
+                          )}
+                        </button>
+                      )}
 
-                    {isAccepted && (
-                      <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
-                        <p className="text-green-700 font-bold flex items-center justify-center gap-2">
-                          <FaCheckCircle /> Bid Accepted
-                        </p>
-                      </div>
-                    )}
+                      {isAccepted && (
+                        <div className="flex-1 bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
+                          <p className="text-green-700 font-bold flex items-center justify-center gap-2">
+                            <FaCheckCircle /> Accepted ✅
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

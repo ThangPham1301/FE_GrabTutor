@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaPlus, FaEdit, FaTrash, FaEye, FaArrowLeft, FaSearch, FaFilter, FaCalendar, FaBook } from 'react-icons/fa';
+import { 
+  FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter, FaCalendar, FaBook,
+  FaChevronLeft, FaChevronRight, FaSpinner, FaTimes, FaChartBar,
+  FaClock, FaCheckCircle, FaExclamationCircle, FaArrowRight
+} from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
-import PostFormModal from '../../components/PostFormModal';  // ✅ Import
+import PostFormModal from '../../components/PostFormModal';
+
+const DEBUG = true;
 
 export default function PostInventory() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // State
   const [posts, setPosts] = useState([]);
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,18 +24,20 @@ export default function PostInventory() {
   const [pageNo, setPageNo] = useState(0);
   const [pageSize] = useState(12);
   const [totalPages, setTotalPages] = useState(0);
+  
+  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [subjects, setSubjects] = useState([]);
+  
+  // Modal
   const [showModal, setShowModal] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
 
+  // ==================== LIFECYCLE ====================
   useEffect(() => {
-    console.log('=== PostInventory useEffect ===');
-    console.log('user:', user);
-    
     if (!user) {
-      console.log('No user, redirecting to login');
       navigate('/login-role');
       return;
     }
@@ -37,21 +47,19 @@ export default function PostInventory() {
 
   useEffect(() => {
     filterPosts();
-  }, [posts, searchTerm, filterSubject]);
+  }, [posts, searchTerm, filterSubject, filterStatus]);
 
+  // ==================== API CALLS ====================
   const fetchSubjects = async () => {
     try {
       const response = await postApi.getSubjects();
       
       let items = [];
-      if (response.data && Array.isArray(response.data.items)) {
+      if (response.data?.items && Array.isArray(response.data.items)) {
         items = response.data.items;
-      } else if (response.data && Array.isArray(response.data)) {
+      } else if (Array.isArray(response.data)) {
         items = response.data;
-      } else if (Array.isArray(response)) {
-        items = response;
       }
-      
       setSubjects(items);
     } catch (err) {
       console.error('Error fetching subjects:', err);
@@ -63,13 +71,7 @@ export default function PostInventory() {
       setLoading(true);
       setError(null);
       
-      console.log('=== fetchMyPosts START ===');
-      console.log('user.userId:', user?.userId);
-      
       const response = await postApi.getMyPosts(pageNo, pageSize);
-      
-      console.log('=== fetchMyPosts SUCCESS ===');
-      console.log('Full response:', response);
       
       let items = [];
       let totalPagesValue = 0;
@@ -84,12 +86,11 @@ export default function PostInventory() {
         items = response.data;
       }
       
-      console.log('Items after processing:', items);
       setPosts(items);
       setTotalPages(totalPagesValue);
+      if (DEBUG) console.log('✅ Posts loaded:', items.length);
     } catch (err) {
-      console.error('=== fetchMyPosts ERROR ===');
-      console.error('Error:', err.message);
+      console.error('Error fetching posts:', err);
       setError(err.message || 'Unable to load posts');
       setPosts([]);
     } finally {
@@ -97,16 +98,20 @@ export default function PostInventory() {
     }
   };
 
+  // ==================== FILTERS ====================
   const filterPosts = () => {
     let filtered = posts;
 
-    if (searchTerm) {
+    // Search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.description.toLowerCase().includes(searchTerm.toLowerCase())
+        post.title?.toLowerCase().includes(term) ||
+        post.description?.toLowerCase().includes(term)
       );
     }
 
+    // Subject filter
     if (filterSubject) {
       filtered = filtered.filter(post =>
         (post.subject?.id === parseInt(filterSubject) || 
@@ -114,23 +119,48 @@ export default function PostInventory() {
       );
     }
 
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(post => {
+        if (filterStatus === 'open') return post.status === 'OPEN';
+        if (filterStatus === 'closed') return post.status === 'CLOSED';
+        return true;
+      });
+    }
+
     setFilteredPosts(filtered);
   };
 
-  const handleEdit = (post) => {
-    navigate(`/posts/edit/${post.id}`, { state: { post } });
+  // ==================== HANDLERS ====================
+  const handleOpenModal = (post = null) => {
+    if (post) {
+      setEditingPost(post);
+    } else {
+      setEditingPost(null);
+    }
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingPost(null);
+  };
+
+  const handleModalSuccess = () => {
+    setPageNo(0);
+    fetchMyPosts();
   };
 
   const handleDelete = async (postId, postTitle) => {
-    if (window.confirm(`Are you sure you want to delete "${postTitle}"?`)) {
-      try {
-        await postApi.deletePost(postId);
-        alert('Post deleted successfully!');
-        await fetchMyPosts();
-      } catch (err) {
-        console.error('Delete error:', err);
-        alert('Error deleting post!');
-      }
+    if (!window.confirm(`Delete "${postTitle}"? This action cannot be undone.`)) return;
+
+    try {
+      await postApi.deletePost(postId);
+      alert('✅ Post deleted successfully');
+      await fetchMyPosts();
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('❌ Error deleting post');
     }
   };
 
@@ -146,27 +176,35 @@ export default function PostInventory() {
     if (pageNo > 0) setPageNo(pageNo - 1);
   };
 
-  // ✅ Mở modal
-  const handleOpenModal = (post = null) => {
-    if (post) {
-      setEditingPost(post);
-    } else {
-      setEditingPost(null);
-    }
-    setShowModal(true);
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterSubject('');
+    setFilterStatus('all');
+    setPageNo(0);
   };
 
-  // ✅ Đóng modal
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingPost(null);
+  // ==================== UTILITIES ====================
+  const getStatusIcon = (status) => {
+    if (status === 'OPEN') return <FaCheckCircle className="text-green-600" />;
+    if (status === 'CLOSED') return <FaExclamationCircle className="text-red-600" />;
+    return <FaClock className="text-gray-600" />;
   };
 
-  // ✅ Callback khi thành công
-  const handleModalSuccess = () => {
-    fetchMyPosts();
+  const getStatusColor = (status) => {
+    if (status === 'OPEN') return 'bg-green-100 text-green-700';
+    if (status === 'CLOSED') return 'bg-red-100 text-red-700';
+    return 'bg-gray-100 text-gray-700';
   };
 
+  const displayPosts = filteredPosts;
+  const hasFilters = searchTerm.trim() || filterSubject || filterStatus !== 'all';
+  const stats = {
+    total: posts.length,
+    open: posts.filter(p => p.status === 'OPEN').length,
+    closed: posts.filter(p => p.status === 'CLOSED').length
+  };
+
+  // ==================== RENDER ====================
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -179,61 +217,89 @@ export default function PostInventory() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-12 px-4">
+      {/* ==================== HERO SECTION ==================== */}
+      <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-16 px-4 shadow-lg">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-5xl font-bold mb-3">My Posts</h1>
-              <p className="text-lg text-teal-100">Manage and track your tutoring posts</p>
+          <div className="flex justify-between items-start gap-8">
+            <div className="flex-1">
+              <h1 className="text-5xl md:text-6xl font-bold mb-4">
+                📝 My Posts
+              </h1>
+              <p className="text-xl text-teal-100 mb-6">
+                Manage and track all your tutoring questions
+              </p>
+              
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4 max-w-md">
+                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-4 py-3">
+                  <div className="text-3xl font-bold">{stats.total}</div>
+                  <div className="text-sm text-teal-100">Total Posts</div>
+                </div>
+                <div className="bg-green-500 bg-opacity-30 backdrop-blur-sm rounded-lg px-4 py-3">
+                  <div className="text-3xl font-bold">{stats.open}</div>
+                  <div className="text-sm text-teal-100">Open</div>
+                </div>
+                <div className="bg-red-500 bg-opacity-30 backdrop-blur-sm rounded-lg px-4 py-3">
+                  <div className="text-3xl font-bold">{stats.closed}</div>
+                  <div className="text-sm text-teal-100">Closed</div>
+                </div>
+              </div>
             </div>
-            {/* ✅ Create New Post Button */}
+
+            {/* Create Button */}
             <button
               onClick={() => handleOpenModal(null)}
-              className="flex items-center gap-2 px-8 py-3 bg-white text-[#03ccba] rounded-lg font-bold hover:shadow-lg transition-all duration-300"
+              className="px-8 py-4 bg-white text-[#03ccba] rounded-xl font-bold hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 whitespace-nowrap"
             >
-              <FaPlus size={20} /> Create New Post
+              <FaPlus size={20} />
+              <span>Create Post</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* ==================== MAIN CONTENT ==================== */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         
-        {/* Error Message */}
+        {/* Error Alert */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg">
-            <p className="text-red-700 font-semibold">{error}</p>
-            <p className="text-sm text-red-600 mt-1">Check console (F12) for details</p>
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8 rounded-lg">
+            <p className="text-red-700 font-semibold">⚠️ {error}</p>
           </div>
         )}
 
-        {/* Search & Filter Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search Bar */}
-            <div className="md:col-span-2 relative">
-              <FaSearch className="absolute left-4 top-4 text-gray-400 text-lg" />
-              <input
-                type="text"
-                placeholder="Search by title or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all"
-              />
+        {/* ==================== SEARCH & FILTER ==================== */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            {/* Search Input */}
+            <div className="md:col-span-5">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                🔍 Search Posts
+              </label>
+              <div className="relative">
+                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search by title or description..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all"
+                />
+              </div>
             </div>
 
-            {/* Filter by Subject */}
-            <div className="relative">
-              <FaFilter className="absolute left-4 top-4 text-gray-400 text-lg" />
+            {/* Subject Filter */}
+            <div className="md:col-span-3">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                📖 Subject
+              </label>
               <select
                 value={filterSubject}
                 onChange={(e) => setFilterSubject(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all appearance-none bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white"
               >
                 <option value="">All Subjects</option>
                 {subjects.map(subject => (
@@ -243,145 +309,156 @@ export default function PostInventory() {
                 ))}
               </select>
             </div>
+
+            {/* Status Filter */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                📊 Status
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+
+            {/* Clear Button */}
+            {hasFilters && (
+              <div className="md:col-span-2 flex">
+                <button
+                  onClick={handleClearFilters}
+                  className="flex-1 px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold flex items-center justify-center gap-2 h-full"
+                >
+                  <FaTimes size={16} />
+                  Clear
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Results Count */}
-          {(searchTerm || filterSubject) && (
-            <div className="mt-4 text-sm text-gray-600">
-              Found <span className="font-bold text-[#03ccba]">{filteredPosts.length}</span> post{filteredPosts.length !== 1 ? 's' : ''}
+          {/* Results Info */}
+          {hasFilters && (
+            <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded text-sm text-blue-700 flex items-center gap-2">
+              <FaFilter size={14} />
+              Found <span className="font-bold">{displayPosts.length}</span> post{displayPosts.length !== 1 ? 's' : ''} matching your criteria
             </div>
           )}
         </div>
 
-        {/* Posts Grid or Table */}
+        {/* ==================== POSTS TABLE ==================== */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#03ccba] mb-4"></div>
-            <p className="text-gray-500 text-lg">Loading posts...</p>
+            <FaSpinner className="animate-spin text-5xl text-[#03ccba] mx-auto mb-4" />
+            <p className="text-gray-600 text-lg font-semibold">Loading posts...</p>
           </div>
-        ) : (searchTerm || filterSubject ? filteredPosts : posts).length > 0 ? (
+        ) : displayPosts.length > 0 ? (
           <>
-            {/* Desktop - Grid View */}
-            <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-              {(searchTerm || filterSubject ? filteredPosts : posts).map(post => (
-                // ✅ FIX: Thêm flex flex-col h-full và overflow-hidden
-                <div key={post.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col">
-                  
-                  {/* ✅ Image - Fixed Height */}
-                  {post.imageUrl && (
-                    <div className="relative h-40 overflow-hidden flex-shrink-0">
-                      <img
-                        src={post.imageUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                      />
-                      <div className="absolute top-3 right-3 bg-[#03ccba] text-white px-3 py-1 rounded-full text-xs font-bold">
-                        {post.subject?.name || 'Subject'}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ✅ Content - Flex Grow */}
-                  <div className="p-6 flex flex-col flex-grow">
-                    {/* Title */}
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 hover:text-[#03ccba] transition-colors">
-                      {post.title}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
-                      {post.description}
-                    </p>
-
-                    {/* Meta Info */}
-                    <div className="space-y-2 mb-4 pb-4 border-b border-gray-200 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <FaCalendar size={14} className="text-[#03ccba]" />
-                        <span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'N/A'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <FaBook size={14} className="text-[#03ccba]" />
-                        <span>{post.subject?.name || 'N/A'}</span>
-                      </div>
-                    </div>
-
-                    {/* ✅ Action Buttons - Luôn ở dưới cùng */}
-                    <div className="flex gap-2 mt-auto">
-                      <button
-                        onClick={() => handleViewDetail(post.id)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold text-sm flex items-center justify-center gap-1"
-                      >
-                        <FaEye size={14} /> View
-                      </button>
-                      
-                      {/* Edit */}
-                      <button
-                        onClick={() => handleOpenModal(post)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                        title="Edit"
-                      >
-                        <FaEdit size={16} />
-                      </button>
-                      
-                      {/* Delete */}
-                      <button
-                        onClick={() => handleDelete(post.id, post.title)}
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                        title="Delete"
-                      >
-                        <FaTrash size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Mobile - Table View */}
-            <div className="lg:hidden bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white">
+                  {/* Header */}
+                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left font-bold">#</th>
-                      <th className="px-6 py-4 text-left font-bold">Title</th>
-                      <th className="px-6 py-4 text-left font-bold">Created</th>
-                      <th className="px-6 py-4 text-center font-bold">Actions</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">#</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Post Title</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Subject</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Status</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Created Date</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {(searchTerm || filterSubject ? filteredPosts : posts).map((post, index) => (
-                      <tr key={post.id} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-700">{pageNo * pageSize + index + 1}</td>
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-gray-900 max-w-xs truncate">{post.title}</p>
-                          <p className="text-xs text-gray-600">{post.subject?.name || 'N/A'}</p>
-                        </td>
+
+                  {/* Body */}
+                  <tbody className="divide-y divide-gray-200">
+                    {displayPosts.map((post, index) => (
+                      <tr key={post.id} className="hover:bg-gray-50 transition-colors group">
+                        {/* Index */}
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'N/A'}
+                          <span className="font-bold text-[#03ccba]">
+                            {pageNo * pageSize + index + 1}
+                          </span>
                         </td>
+
+                        {/* Title */}
                         <td className="px-6 py-4">
-                          <div className="flex gap-2 justify-center">
+                          <div className="flex items-start gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#03ccba] to-[#02b5a5] flex-shrink-0 flex items-center justify-center text-white font-bold">
+                              {post.title?.charAt(0) || 'P'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 line-clamp-1 hover:text-[#03ccba] transition-colors">
+                                {post.title}
+                              </p>
+                              <p className="text-xs text-gray-600 line-clamp-1 mt-1">
+                                {post.description}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Subject */}
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                            {post.subject?.name || 'N/A'}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center justify-center gap-1 w-fit mx-auto ${getStatusColor(post.status || 'OPEN')}`}>
+                            {getStatusIcon(post.status)}
+                            {post.status || 'OPEN'}
+                          </span>
+                        </td>
+
+                        {/* Date */}
+                        <td className="px-6 py-4 text-center text-sm text-gray-600">
+                          <div className="flex items-center justify-center gap-2">
+                            <FaCalendar size={14} className="text-[#03ccba]" />
+                            <span>
+                              {post.createdAt 
+                                ? new Date(post.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })
+                                : 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            {/* View */}
                             <button
                               onClick={() => handleViewDetail(post.id)}
-                              className="p-2 bg-[#03ccba] text-white rounded hover:shadow-md transition-all"
+                              className="p-2.5 bg-[#03ccba] text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
                               title="View"
                             >
-                              <FaEye size={16} />
+                              <FaEye size={14} />
                             </button>
+
+                            {/* Edit */}
                             <button
                               onClick={() => handleOpenModal(post)}
-                              className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                              className="p-2.5 bg-blue-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
                               title="Edit"
                             >
-                              <FaEdit size={16} />
+                              <FaEdit size={14} />
                             </button>
+
+                            {/* Delete */}
                             <button
                               onClick={() => handleDelete(post.id, post.title)}
-                              className="p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                              className="p-2.5 bg-red-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
                               title="Delete"
                             >
-                              <FaTrash size={16} />
+                              <FaTrash size={14} />
                             </button>
                           </div>
                         </td>
@@ -394,74 +471,61 @@ export default function PostInventory() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 py-8 mt-8">
+              <div className="flex justify-center items-center gap-6 mt-8">
                 <button
                   onClick={handlePrevPage}
                   disabled={pageNo === 0}
-                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition-colors font-semibold"
+                  className="px-6 py-3 bg-white text-gray-700 rounded-lg border-2 border-gray-200 hover:border-[#03ccba] hover:text-[#03ccba] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-2 shadow-md"
                 >
-                  ← Previous
+                  <FaChevronLeft size={16} />
+                  Previous
                 </button>
-                <span className="px-6 py-2 bg-white rounded-lg border-2 border-[#03ccba] text-gray-900 font-bold">
-                  Page {pageNo + 1} / {totalPages}
-                </span>
+
+                <div className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg font-bold shadow-md min-w-max">
+                  Page {pageNo + 1} of {totalPages}
+                </div>
+
                 <button
                   onClick={handleNextPage}
                   disabled={pageNo >= totalPages - 1}
-                  className="px-6 py-2 bg-[#03ccba] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#02b5a5] transition-colors font-semibold"
+                  className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-2 shadow-md"
                 >
-                  Next →
+                  Next
+                  <FaChevronRight size={16} />
                 </button>
               </div>
             )}
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl shadow-lg p-6 border-l-4 border-blue-400">
-                <p className="text-sm text-gray-600 font-semibold">Total Posts</p>
-                <p className="text-4xl font-bold text-gray-900 mt-2">{posts.length}</p>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border-l-4 border-green-400">
-                <p className="text-sm text-gray-600 font-semibold">Recent Posts</p>
-                <p className="text-4xl font-bold text-gray-900 mt-2">
-                  {posts.filter(p => {
-                    const date = new Date(p.updatedAt || p.createdAt);
-                    const today = new Date();
-                    return (today - date) / (1000 * 60 * 60 * 24) < 7;
-                  }).length}
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-lg p-6 border-l-4 border-purple-400">
-                <p className="text-sm text-gray-600 font-semibold">Today</p>
-                <p className="text-4xl font-bold text-gray-900 mt-2">
-                  {posts.filter(p => {
-                    const date = new Date(p.createdAt);
-                    const today = new Date();
-                    return date.toDateString() === today.toDateString();
-                  }).length}
-                </p>
-              </div>
-            </div>
           </>
         ) : (
           <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
             <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-xl mb-6">
-              {searchTerm || filterSubject ? 'No posts match your search' : 'You haven\'t created any posts yet'}
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No Posts Found</h3>
+            <p className="text-gray-600 mb-6">
+              {hasFilters 
+                ? "Try adjusting your search filters"
+                : "You haven't created any posts yet. Start by creating your first post!"}
             </p>
-            {!(searchTerm || filterSubject) && (
+            <div className="flex gap-4 justify-center">
+              {hasFilters && (
+                <button
+                  onClick={handleClearFilters}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+                >
+                  Clear Filters
+                </button>
+              )}
               <button
                 onClick={() => handleOpenModal(null)}
-                className="px-8 py-3 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-colors font-bold inline-flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center gap-2"
               >
-                <FaPlus /> Create First Post
+                <FaPlus /> Create Your First Post
               </button>
-            )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* ✅ Reusable PostFormModal */}
+      {/* Modal */}
       <PostFormModal
         isOpen={showModal}
         onClose={handleCloseModal}

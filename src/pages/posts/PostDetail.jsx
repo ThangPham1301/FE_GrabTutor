@@ -348,17 +348,15 @@ export default function PostDetail() {
       )}
 
       {/* ✅ Bid Modal */}
-      {showBidModal && (
-        <TutorBidModal
-          postId={postId}
-          postTitle={post.title}
-          onClose={() => setShowBidModal(false)}
-          onSuccess={() => {
-            alert('✅ Bid submitted successfully!');
-            setShowBidModal(false);
-          }}
-        />
-      )}
+      <TutorBidModal
+        isOpen={showBidModal}
+        onClose={() => setShowBidModal(false)}
+        onSuccess={() => {
+          setShowBidModal(false);
+          fetchTutorBids?.();
+        }}
+        post={post}
+      />
     </div>
   );
 }

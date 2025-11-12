@@ -392,7 +392,37 @@ const postApi = {
       console.error('deleteTutorBid error:', error.response?.data || error.message);
       throw error;
     }
-  }
+  },
+
+  // ✅ SEARCH posts by keyword
+  searchPosts: async (keyword = '', pageNo = 0, pageSize = 12, sorts = '') => {
+    try {
+      if (!keyword.trim()) {
+        // If no keyword, get all posts
+        return postApi.getAllPosts(pageNo, pageSize, sorts);
+      }
+
+      const url = `${BASE_URL}/posts/search?keyword=${encodeURIComponent(keyword)}&pageNo=${pageNo}&pageSize=${pageSize}&sorts=${sorts}`;
+      
+      if (DEBUG) console.log('🔍 [Search] URL:', url);
+      
+      const response = await axios.get(url);
+      
+      if (DEBUG) console.log('✅ [Search] Response:', response.data);
+      
+      if (response.data?.data?.items) {
+        response.data.data.items = response.data.data.items.map(post => ({
+          ...post,
+          subjectName: post.subject?.name || 'N/A'
+        }));
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ searchPosts error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
 
 };
 
