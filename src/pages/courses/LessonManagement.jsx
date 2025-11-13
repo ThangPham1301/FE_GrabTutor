@@ -30,6 +30,7 @@ export default function LessonManagement() {
   const [videoPreview, setVideoPreview] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   // Fetch course and lessons
   useEffect(() => {
@@ -129,23 +130,55 @@ export default function LessonManagement() {
 
     try {
       setSubmitting(true);
+      setError(null);
 
+      console.log('=== handleSubmit START ===');
+      console.log('Form data:', formData);
+      console.log('Editing ID:', editingId);
+
+      let response;
       if (editingId) {
         // Update existing lesson
-        await lessonApi.updateLesson(editingId, formData);
-        alert('✅ Cập nhật bài học thành công!');
+        response = await lessonApi.updateLesson(editingId, formData);
       } else {
         // Create new lesson
-        await lessonApi.createLesson(courseId, formData);
-        alert('✅ Tạo bài học thành công!');
+        response = await lessonApi.createLesson(courseId, formData);
       }
 
-      resetForm();
-      setShowForm(false);
-      fetchLessons();
+      console.log('=== handleSubmit SUCCESS ===');
+      console.log('Response:', response);
+
+      // ✅ Check if operation was successful
+      if (response?.success || response?.data?.id) {
+        alert('✅ ' + (editingId ? 'Cập nhật' : 'Tạo') + ' bài học thành công!');
+        resetForm();
+        setShowForm(false);
+        setEditingId(null);
+        
+        // ✅ Reload lessons
+        await fetchLessons();
+      } else {
+        throw new Error(response?.message || 'Operation failed');
+      }
     } catch (error) {
-      console.error('Error:', error);
-      alert('❌ Lỗi: ' + (error.response?.data?.message || error.message));
+      console.error('❌ Error details:', error);
+      console.error('Response status:', error.response?.status);
+      console.error('Response data:', error.response?.data);
+      
+      let errorMsg = error.message;
+      
+      if (error.response?.status === 500) {
+        errorMsg = 'Server error (500) - Check backend logs';
+      } else if (error.response?.status === 400) {
+        errorMsg = error.response.data?.message || 'Invalid input';
+      } else if (error.response?.status === 401) {
+        errorMsg = 'Unauthorized - Login required';
+      } else if (error.message.includes('Network error')) {
+        errorMsg = 'Network error - Check if backend is running on port 8080';
+      }
+      
+      setError(errorMsg);
+      alert('❌ Lỗi: ' + errorMsg);
     } finally {
       setSubmitting(false);
     }

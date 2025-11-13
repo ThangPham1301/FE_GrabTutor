@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8080/grabtutor';
 
+// ✅ Fix: Remove Content-Type header, increase timeout
+
 const lessonApi = {
   // Create lesson
   createLesson: async (courseId, lessonData) => {
@@ -36,25 +38,37 @@ const lessonApi = {
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data'
-          }
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          timeout: 30000
         }
       );
 
       console.log('=== createLesson SUCCESS ===');
       console.log('Response:', response.data);
       
-      // ✅ Normalize response - map backend fields to frontend fields
-      const lessonData_ = response.data?.data;
-      if (lessonData_) {
-        lessonData_.isPublished = lessonData_.published;
-        lessonData_.isPreview = lessonData_.preview;
+      // ✅ FIX: Normalize response - backend uses 'published' & 'preview'
+      // but frontend expects 'isPublished' & 'isPreview'
+      const lesson = response.data?.data;
+      if (lesson) {
+        lesson.isPublished = lesson.published;
+        lesson.isPreview = lesson.preview;
+        lesson.videoUrl = lesson.videoUrl || '';
+        lesson.imageUrl = lesson.imageUrl || '';
       }
+      
+      console.log('✅ Normalized lesson:', lesson);
       
       return response.data;
     } catch (error) {
       console.error('❌ createLesson error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      if (error.code === 'ERR_NETWORK' || error.code === 'ECONNRESET') {
+        throw new Error('Network error - Server connection reset. Check if backend is running.');
+      }
+      
       throw error;
     }
   },
@@ -70,10 +84,11 @@ const lessonApi = {
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          },
+          timeout: 30000 // ✅ Increase timeout
         }
       );
-
+      
       console.log('=== getLessonById SUCCESS ===');
       console.log('Response:', response.data);
       
@@ -102,14 +117,14 @@ const lessonApi = {
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          },
+          timeout: 30000 // ✅ Increase timeout
         }
       );
-
+      
       console.log('=== getAllLessonsByCourseId SUCCESS ===');
-      console.log('Response:', response.data);
+      console.log('Response data:', response.data);
 
-      // ✅ Normalize response - extract items and map fields
       let items = [];
       if (response.data?.data?.items && Array.isArray(response.data.data.items)) {
         items = response.data.data.items;
@@ -117,7 +132,7 @@ const lessonApi = {
         items = response.data.items;
       }
 
-      // ✅ Map backend fields to frontend fields for all items
+      // ✅ Normalize all lessons
       items = items.map(lesson => ({
         ...lesson,
         isPublished: lesson.published !== undefined ? lesson.published : lesson.isPublished,
@@ -173,9 +188,10 @@ const lessonApi = {
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data'
-          }
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            // ✅ REMOVE: Don't set Content-Type for FormData
+          },
+          timeout: 30000 // ✅ Increase timeout
         }
       );
 
@@ -207,7 +223,8 @@ const lessonApi = {
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          },
+          timeout: 30000 // ✅ Increase timeout
         }
       );
 

@@ -324,41 +324,57 @@ export default function PostDetail() {
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-24 space-y-4">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
 
-              {/* ✅ Tutor Bid Button */}
-              {user && user.role === 'TUTOR' && (
-                <button
-                  onClick={() => setShowBidModal(true)}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
-                >
-                  🤝 Submit Bid
-                </button>
-              )}
+              {/* Buttons Section */}
+              <div className="space-y-3">
+                {/* Student - Waiting for bids */}
+                {user && user.role === 'USER' && (
+                  <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                    <p className="text-blue-800 text-sm font-semibold">Waiting for tutor bids...</p>
+                  </div>
+                )}
 
-              {/* ✅ Student Waiting Message */}
-              {user && user.role === 'USER' && (
-                <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-                  <p className="text-blue-800 text-sm font-semibold">Waiting for tutor bids...</p>
-                </div>
-              )}
-
-              {/* ✅ Login Prompt */}
-              {!user && (
-                <div className="space-y-2">
-                  <p className="text-gray-600 text-sm">Login to submit a bid</p>
+                {/* Tutor - Submit Bid Button */}
+                {user && user.role === 'TUTOR' && post?.status === 'OPEN' && (
                   <button
-                    onClick={() => navigate('/login')}
-                    className="w-full px-6 py-3 bg-[#03ccba] text-white rounded-lg font-bold hover:bg-[#02b5a5] transition-all"
+                    onClick={() => setShowBidModal(true)}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
                   >
-                    Login
+                    🤝 Submit Bid
                   </button>
-                </div>
-              )}
+                )}
+
+                {/* Login Prompt */}
+                {!user && (
+                  <div className="space-y-2">
+                    <p className="text-gray-600 text-sm">Login to submit a bid</p>
+                    <button
+                      onClick={() => navigate('/login-role')}
+                      className="w-full px-6 py-3 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] font-bold transition-colors"
+                    >
+                      Login
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* ✅ Modals */}
+      {showBidModal && (
+        <TutorBidModal
+          isOpen={showBidModal}
+          onClose={() => setShowBidModal(false)}
+          onSuccess={() => {
+            setShowBidModal(false);
+            fetchPostDetail(); // Reload post
+          }}
+          post={post}  // ✅ IMPORTANT: Pass post object
+        />
+      )}
+
+      {/* ReviewForm Modal */}
       {showReviewForm && (
         <ReviewForm
           postId={postId}
@@ -368,14 +384,6 @@ export default function PostDetail() {
             fetchReview();
           }}
           existingReview={review}
-        />
-      )}
-
-      {showBidModal && (
-        <TutorBidModal
-          postId={postId}
-          onClose={() => setShowBidModal(false)}
-          onSubmit={handleBidSubmit}
         />
       )}
     </div>

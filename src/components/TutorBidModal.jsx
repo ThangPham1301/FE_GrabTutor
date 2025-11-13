@@ -25,6 +25,8 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
     }));
     // Clear error when user starts typing
     if (error) setError(null);
+    // ✅ Clear success when user starts typing again
+    if (success) setSuccess(false);
   };
 
   const validateForm = () => {
@@ -113,6 +115,8 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
       if (DEBUG) console.log('✅ Response:', response);
 
       setSuccess(true);
+      
+      // ✅ Reset form
       setFormData({
         proposedPrice: '',
         questionLevel: 'MEDIUM',
@@ -158,124 +162,147 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b-2 border-gray-100 sticky top-0 bg-white">
-          <h2 className="text-2xl font-bold text-gray-900">🤝 Submit Bid</h2>
+    // ==================== BACKDROP - BLUR ==================== 
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+      {/* ==================== MODAL CONTAINER ==================== */}
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+        
+        {/* ==================== HEADER ==================== */}
+        <div className="flex justify-between items-center p-6 border-b-2 border-gray-100 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-lg flex items-center justify-center">
+              <span className="text-white text-lg">🤝</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Submit Bid</h2>
+          </div>
           <button
             onClick={onClose}
             disabled={loading}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 text-gray-500 hover:text-gray-700"
             title="Close"
           >
-            <FaTimes size={24} className="text-gray-500" />
+            <FaTimes size={24} />
           </button>
         </div>
 
-        {/* Content */}
+        {/* ==================== CONTENT ==================== */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          
           {/* Success Message */}
           {success && (
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded flex gap-3">
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded flex gap-3 animate-slide-down">
               <FaCheck className="text-green-600 flex-shrink-0 text-lg mt-0.5" />
-              <p className="text-sm font-semibold text-green-700">
-                ✅ Bid submitted successfully! Closing...
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-green-700">✅ Bid submitted successfully!</p>
+                <p className="text-xs text-green-600">Closing in a moment...</p>
+              </div>
             </div>
           )}
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded flex gap-3">
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded flex gap-3 animate-shake">
               <FaExclamationCircle className="text-red-600 flex-shrink-0 text-lg mt-0.5" />
-              <p className="text-sm font-semibold text-red-700">
-                {error}
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-red-700">{error}</p>
+              </div>
             </div>
           )}
 
-          {/* Post Info */}
-          <div className="bg-gradient-to-br from-[#03ccba] to-[#02b5a5] text-white rounded-lg p-4">
-            <p className="text-xs text-teal-100 font-semibold mb-1">QUESTION</p>
-            <h3 className="font-bold text-sm line-clamp-2">{post.title}</h3>
-            <p className="text-xs text-teal-100 mt-2">{post.description?.substring(0, 50)}...</p>
+          {/* ==================== POST INFO ==================== */}
+          <div className="bg-gradient-to-br from-[#03ccba]/10 to-[#02b5a5]/10 border-l-4 border-[#03ccba] rounded-lg p-4">
+            <p className="text-xs text-[#03ccba] font-bold uppercase mb-2 tracking-wide">Question</p>
+            <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{post.title}</h3>
+            <p className="text-xs text-gray-600 line-clamp-2">{post.description?.substring(0, 80)}...</p>
           </div>
 
+          {/* ==================== FORM FIELDS ==================== */}
+          
           {/* Proposed Price */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Proposed Price (VNĐ/hour) <span className="text-red-500">*</span>
+              💰 Proposed Price (VNĐ/hour)
+              <span className="text-red-500 ml-1">*</span>
             </label>
-            <input
-              type="number"
-              name="proposedPrice"
-              value={formData.proposedPrice}
-              onChange={handleInputChange}
-              placeholder="50000"
-              min="50000"
-              step="10000"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all disabled:bg-gray-100"
-              disabled={loading}
-              required
-            />
+            <div className="relative">
+              <input
+                type="number"
+                name="proposedPrice"
+                value={formData.proposedPrice}
+                onChange={handleInputChange}
+                placeholder="50000"
+                min="50000"
+                step="10000"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all disabled:bg-gray-50 text-base font-medium"
+                disabled={loading}
+                required
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">VNĐ</span>
+            </div>
             <p className="text-xs text-gray-500 mt-1">💡 Minimum: 50,000 VNĐ</p>
           </div>
 
           {/* Question Level */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Question Level <span className="text-red-500">*</span>
+              📊 Question Level
+              <span className="text-red-500 ml-1">*</span>
             </label>
             <select
               name="questionLevel"
               value={formData.questionLevel}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white disabled:bg-gray-100"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white disabled:bg-gray-50 text-base font-medium"
               disabled={loading}
             >
-              <option value="EASY">Easy</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HARD">Hard</option>
-              <option value="VERY_HARD">Very Hard</option>
+              <option value="EASY">🟢 Easy</option>
+              <option value="MEDIUM">🟡 Medium</option>
+              <option value="HARD">🔴 Hard</option>
+              <option value="VERY_HARD">⚫ Very Hard</option>
             </select>
           </div>
 
-          {/* Description */}
+          {/* Description / Approach */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              Your Approach / Solution <span className="text-red-500">*</span>
+              ✍️ Your Approach / Solution
+              <span className="text-red-500 ml-1">*</span>
             </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              placeholder="Describe how you would solve this question... (10-500 characters)"
+              placeholder="Describe how you would solve this question..."
               rows={5}
               maxLength={500}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all resize-none disabled:bg-gray-100"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all resize-none disabled:bg-gray-50 text-base font-medium"
               disabled={loading}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.description.length}/500 characters
-            </p>
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-xs text-gray-500">Min: 10 characters</p>
+              <p className={`text-xs font-semibold ${
+                formData.description.length > 450 ? 'text-red-500' : 'text-gray-600'
+              }`}>
+                {formData.description.length}/500
+              </p>
+            </div>
           </div>
 
-          {/* Buttons */}
+          {/* ==================== BUTTONS ==================== */}
           <div className="flex gap-3 pt-4 border-t-2 border-gray-100">
             <button
               type="button"
               onClick={onClose}
-              disabled={loading}
-              className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || success}
+              className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || success}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg hover:shadow-[#03ccba]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold text-base flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
