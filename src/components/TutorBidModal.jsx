@@ -230,16 +230,18 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
                 name="proposedPrice"
                 value={formData.proposedPrice}
                 onChange={handleInputChange}
-                placeholder="50000"
-                min="50000"
-                step="10000"
+                placeholder="0"
+                min="0"
+                step="1000"
+                // ✅ SỬA: Bỏ min="50000", thay thế bằng min="0"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all disabled:bg-gray-50 text-base font-medium"
                 disabled={loading}
                 required
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">VNĐ</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">💡 Minimum: 50,000 VNĐ</p>
+            {/* ✅ SỬA: Cập nhật thông báo helper text */}
+            <p className="text-xs text-gray-500 mt-1">💡 Nhập giá theo giờ</p>
           </div>
 
           {/* Question Level */}

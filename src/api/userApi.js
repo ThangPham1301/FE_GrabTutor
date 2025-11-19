@@ -17,6 +17,30 @@ const userApi = {
     }
   },
 
+  // ✅ NEW - Lấy số dư ví của user
+  getMyBalance: async () => {
+    try {
+      console.log('=== getMyBalance START ===');
+      
+      const response = await axios.get(
+        `${BASE_URL}/grabtutor/users/myBalance`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      console.log('=== getMyBalance SUCCESS ===');
+      console.log('Response:', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ getMyBalance error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   // Lấy thông tin người dùng theo ID
   getUserById: async (userId) => {
     try {
@@ -325,5 +349,6 @@ const userApi = {
     }
   },
 };
+
 
 export default userApi;

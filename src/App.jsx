@@ -32,17 +32,19 @@ import BrowseCourses from './pages/courses/BrowseCourses';
 import CourseDetail from './pages/courses/CourseDetail';
 import TutorCourseInventory from './pages/courses/TutorCourseInventory';
 import MyEnrolledCourses from './pages/courses/MyEnrolledCourses';
-import CreateCourse from './pages/courses/CreateCourse';  // ✅ NEW
-import EditCourse from './pages/courses/EditCourse';      // ✅ NEW
+import CreateCourse from './pages/courses/CreateCourse';  
+import EditCourse from './pages/courses/EditCourse';     
 import LessonManagement from './pages/courses/LessonManagement';
 import LessonPlayer from './pages/courses/LessonPlayer';
 import ChatPage from './pages/Chat/ChatPage';
+import TutorWallet from './pages/wallet/TutorWallet';
+import AdminInteractions from './pages/admin/AdminInteractions';
+import ReportDetail from './pages/admin/ReportDetail'; // ← Sẽ tạo sau
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -125,6 +127,19 @@ function App() {
             } 
           />
           
+          {/* ✅ NEW: Tutor Wallet Page */}
+          <Route path="/wallet/tutor" element={<ProtectedRoute element={<TutorWallet />} allowedRoles={['TUTOR']} />} />
+
+          {/* ✅ NEW: Admin Interactions */}
+          <Route 
+            path="/admin/interactions" 
+            element={<ProtectedRoute element={<AdminInteractions />} allowedRoles={['ADMIN']} />} 
+          />
+          <Route 
+            path="/admin/report/:reportId" 
+            element={<ProtectedRoute element={<ReportDetail />} allowedRoles={['ADMIN']} />} 
+          />
+
           {/* 404 */}
         </Routes>
       </Router>

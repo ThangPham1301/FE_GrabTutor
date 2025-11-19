@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaWallet, FaArrowLeft, FaCheckCircle, FaExclamationTriangle, FaCopy } from 'react-icons/fa';
 import transactionApi from '../../api/transactionApi';
+import userApi from '../../api/userApi';
 import Navbar from '../../components/Navbar';
+import { useAuth } from '../../contexts/AuthContext';
 
 const RECHARGE_OPTIONS = [
   { amount: 100000, label: '100,000 VNĐ' },
@@ -22,11 +24,36 @@ const TEST_CARD = {
 
 export default function RechargeOptions() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showTestCard, setShowTestCard] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const [balance, setBalance] = useState(null); // ✅ NEW: balance state
+  const [loadingBalance, setLoadingBalance] = useState(true); // ✅ NEW: loading state
+
+  // ✅ NEW: Fetch balance on mount
+  useEffect(() => {
+    fetchBalance();
+  }, []);
+
+  // ✅ NEW: Get balance from API
+  const fetchBalance = async () => {
+    try {
+      setLoadingBalance(true);
+      const response = await userApi.getMyBalance();
+      console.log('Balance response:', response);
+      
+      const balanceAmount = response.data?.balance || 0;
+      setBalance(balanceAmount);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      setBalance(0);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
 
   // ✅ Copy to clipboard
   const copyToClipboard = (text, fieldName) => {
@@ -82,12 +109,12 @@ export default function RechargeOptions() {
 
   // ✅ Handle custom amount
   const handleCustomAmount = async () => {
-    const amount = parseInt(customAmount);
-    
     if (!customAmount.trim()) {
       setError('Please enter an amount');
       return;
     }
+    
+    const amount = parseInt(customAmount);
     
     if (isNaN(amount)) {
       setError('Amount must be a valid number');
@@ -122,6 +149,32 @@ export default function RechargeOptions() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 py-12">
         
+        {/* ✅ NEW: Current Balance Section - TOP */}
+        <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl shadow-lg p-8 border-2 border-green-300">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-gray-600 font-semibold text-sm mb-2">💳 Current Balance</p>
+              {loadingBalance ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin h-6 w-6 border-2 border-green-500 border-t-transparent rounded-full"></div>
+                  <p className="text-gray-600">Loading...</p>
+                </div>
+              ) : (
+                <p className="text-5xl font-bold text-green-600">
+                  {balance?.toLocaleString('vi-VN')} VNĐ
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <FaCheckCircle className="text-green-600 text-4xl" />
+              <div>
+                <p className="text-green-700 font-semibold">Ready to add funds</p>
+                <p className="text-green-600 text-sm">Instant funding available</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-8">
@@ -239,7 +292,6 @@ export default function RechargeOptions() {
           {/* Right Column - Test Card Info (Sticky) */}
           <div className="lg:col-span-1">
             <div className="sticky top-20">
-              Test Card Info - PROMINENT
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-amber-300">
                 <div className="flex items-center gap-2 mb-5">
                   <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
@@ -255,63 +307,13 @@ export default function RechargeOptions() {
                     <p className="text-xs text-gray-600 font-semibold mb-1">Bank</p>
                     <p className="text-sm font-bold text-gray-900">{TEST_CARD.bank}</p>
                   </div>
-
-                  {/* Card Number
-                  <div className="bg-white rounded-lg p-3">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Card Number</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-mono font-bold text-gray-900 break-all">{TEST_CARD.cardNumber}</p>
-                      <button
-                        onClick={() => copyToClipboard(TEST_CARD.cardNumber, 'cardNumber')}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
-                        title="Copy"
-                      >
-                        <FaCopy size={14} className={copiedField === 'cardNumber' ? 'text-green-600' : 'text-gray-400'} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Cardholder */}
-                  {/* <div className="bg-white rounded-lg p-3">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Cardholder</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-bold text-gray-900">{TEST_CARD.cardHolder}</p>
-                      <button
-                        onClick={() => copyToClipboard(TEST_CARD.cardHolder, 'cardHolder')}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
-                      >
-                        <FaCopy size={14} className={copiedField === 'cardHolder' ? 'text-green-600' : 'text-gray-400'} />
-                      </button>
-                    </div>
-                  </div> */}
-
-                  {/* Expiry */}
-                  {/* <div className="bg-white rounded-lg p-3">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Issue Date</p>
-                    <p className="text-sm font-bold text-gray-900">{TEST_CARD.expiry}</p>
-                  </div> */}
-
-                  {/* OTP */}
-                  {/* <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-xs text-red-700 font-semibold mb-1">🔐 OTP Code</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-mono font-bold text-red-600">{TEST_CARD.otp}</p>
-                      <button
-                        onClick={() => copyToClipboard(TEST_CARD.otp, 'otp')}
-                        className="p-1 hover:bg-red-100 rounded transition-colors flex-shrink-0"
-                      >
-                        <FaCopy size={14} className={copiedField === 'otp' ? 'text-green-600' : 'text-gray-600'} />
-                      </button>
-                    </div>
-                  </div>*/}
-                </div> 
+                </div>
 
                 {/* Info Alert */}
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-xs text-yellow-800 mt-4">
                   <p className="font-semibold mb-1">📌 Testing Only</p>
                   <p>Won't charge real account</p>
                 </div>
-              </div>
 
               {/* FAQ Sidebar */}
               <div className="bg-white rounded-2xl shadow-lg p-6 mt-6">
@@ -330,6 +332,7 @@ export default function RechargeOptions() {
                     <p className="text-gray-600 text-xs">Instant</p>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
