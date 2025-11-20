@@ -7,7 +7,8 @@ import {
   FaHandshake, FaComments, FaChevronDown, FaBox
 } from 'react-icons/fa';
 import PostBidsDropdown from './PostBidsDropdown';
-
+import NotificationBell from './NotificationBell';
+import MyReportsDropdown from './MyReportsDropdown';
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -15,16 +16,15 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [balance, setBalance] = useState(null); // ✅ NEW: balance state
-  const [loadingBalance, setLoadingBalance] = useState(false); // ✅ NEW: loading state
+  const [balance, setBalance] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
   useEffect(() => {
     if (user && user.role === 'TUTOR') {
-      fetchBalance(); // ✅ Fetch balance for tutor
+      fetchBalance();
     }
   }, [user]);
 
-  // ✅ NEW: Fetch balance
   const fetchBalance = async () => {
     try {
       setLoadingBalance(true);
@@ -43,16 +43,6 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleNavigation = () => {
-    if (!user) {
-      navigate('/login');
-    } else if (user.role === 'USER') {
-      navigate('/posts');
-    } else {
-      alert('⚠️ Chỉ có STUDENT mới có thể đặt câu hỏi!');
-    }
   };
 
   const getAvatarColor = () => {
@@ -99,7 +89,6 @@ export default function Navbar() {
             {/* Browse Posts - STUDENT ONLY */}
             {user && user.role === 'USER' && (
               <Link to="/posts" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors">
-                
                 Browse Posts
               </Link>
             )}
@@ -126,23 +115,6 @@ export default function Navbar() {
               Chat
             </button>
 
-            {/* ✅ TUTOR WALLET - NEW NAVBAR ITEM */}
-            {user && user.role === 'TUTOR' && (
-              <button
-                onClick={() => navigate('/wallet/tutor')}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 text-green-700 rounded-lg hover:shadow-lg transition-all font-bold hover:border-green-500"
-                title="My Wallet"
-              >
-                <FaWallet size={18} />
-                <span className="hidden sm:inline">Wallet</span>
-                {!loadingBalance && balance !== null && (
-                  <span className="ml-1 px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
-                    {(balance / 1000000).toFixed(1)}M
-                  </span>
-                )}
-              </button>
-            )}
-
             {/* Inventory Dropdown - Student Only */}
             {user && user.role === 'USER' && (
               <div className="relative group">
@@ -157,10 +129,7 @@ export default function Navbar() {
                   
                   {/* My Posts */}
                   <button
-                    onClick={() => {
-                      navigate('/posts/inventory');
-                      setIsDropdownOpen(false);
-                    }}
+                    onClick={() => navigate('/posts/inventory')}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
                   >
                     <FaFolderOpen size={16} className="text-blue-600" />
@@ -172,10 +141,7 @@ export default function Navbar() {
 
                   {/* My Learning */}
                   <button
-                    onClick={() => {
-                      navigate('/courses/my-enrolled');
-                      setIsDropdownOpen(false);
-                    }}
+                    onClick={() => navigate('/courses/my-enrolled')}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
                   >
                     <FaBook size={16} className="text-green-600" />
@@ -204,17 +170,6 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Recharge - Student Only */}
-            {user && user.role === 'USER' && (
-              <button
-                onClick={() => navigate('/wallet/recharge')}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-bold"
-              >
-                <FaCoins size={18} />
-                Recharge
-              </button>
-            )}
-
             {/* User Menu Dropdown */}
             {user ? (
               <div className="relative">
@@ -232,7 +187,7 @@ export default function Navbar() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
                     {/* User Info Header */}
                     <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-4">
                       <div className="flex items-center gap-3">
@@ -245,6 +200,54 @@ export default function Navbar() {
                         </div>
                       </div>
                     </div>
+
+                    {/* ✅ NOTIFICATIONS SECTION */}
+                    <div className="border-b border-gray-100 p-4">
+                      <NotificationBell />
+                    </div>
+
+                    {/* ✅ MY REPORTS SECTION - NEW! */}
+                    <div className="border-b border-gray-100 p-4">
+                      <MyReportsDropdown />
+                    </div>
+
+                    {/* ✅ TUTOR WALLET - Inside Dropdown */}
+                    {user && user.role === 'TUTOR' && (
+                      <button
+                        onClick={() => {
+                          navigate('/wallet/tutor');
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-green-50 flex items-center gap-3 transition-colors border-b border-gray-100"
+                      >
+                        <FaWallet className="text-green-600" size={18} />
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900">My Wallet</p>
+                          <p className="text-xs text-green-600 font-bold">
+                            {!loadingBalance && balance !== null 
+                              ? `${(balance / 1000000).toFixed(1)}M VNĐ` 
+                              : 'Loading...'}
+                          </p>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* ✅ STUDENT RECHARGE - Inside Dropdown */}
+                    {user && user.role === 'USER' && (
+                      <button
+                        onClick={() => {
+                          navigate('/wallet/recharge');
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 transition-colors border-b border-gray-100"
+                      >
+                        <FaCoins className="text-blue-600" size={18} />
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900">Recharge Wallet</p>
+                          <p className="text-xs text-blue-600">Add money to account</p>
+                        </div>
+                      </button>
+                    )}
 
                     {/* Menu Items */}
                     <div className="py-2">
@@ -342,6 +345,20 @@ export default function Navbar() {
               </>
             )}
 
+            {user && user.role === 'TUTOR' && (
+              <>
+                <button
+                  onClick={() => {
+                    navigate('/posts');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
+                >
+                  Browse Questions
+                </button>
+              </>
+            )}
+
             <button
               onClick={() => {
                 navigate('/courses');
@@ -361,19 +378,6 @@ export default function Navbar() {
             >
               Chat
             </button>
-
-            {/* ✅ TUTOR WALLET - Mobile */}
-            {user && user.role === 'TUTOR' && (
-              <button
-                onClick={() => {
-                  navigate('/wallet/tutor');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-green-700 font-bold hover:text-[#03ccba] transition-colors"
-              >
-                💳 My Wallet {balance !== null && `(${(balance / 1000000).toFixed(1)}M)`}
-              </button>
-            )}
 
             {/* Mobile Inventory */}
             {user && user.role === 'USER' && (
@@ -430,18 +434,6 @@ export default function Navbar() {
                   My Bids
                 </button>
               </>
-            )}
-
-            {user && user.role === 'USER' && (
-              <button
-                onClick={() => {
-                  navigate('/wallet/recharge');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-[#03ccba] font-bold"
-              >
-                💳 Recharge
-              </button>
             )}
 
             {user && (

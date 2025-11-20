@@ -39,7 +39,8 @@ import LessonPlayer from './pages/courses/LessonPlayer';
 import ChatPage from './pages/Chat/ChatPage';
 import TutorWallet from './pages/wallet/TutorWallet';
 import AdminInteractions from './pages/admin/AdminInteractions';
-import ReportDetail from './pages/admin/ReportDetail'; // ← Sẽ tạo sau
+import ReportDetail from './pages/admin/ReportDetail'; 
+import MyReports from './pages/MyReports';
 
 function App() {
   return (
@@ -138,6 +139,10 @@ function App() {
           <Route 
             path="/admin/report/:reportId" 
             element={<ProtectedRoute element={<ReportDetail />} allowedRoles={['ADMIN']} />} 
+          />
+          <Route 
+            path="/my-reports" 
+            element={<ProtectedRoute element={<MyReports />} allowedRoles={['USER', 'TUTOR']} />} 
           />
 
           {/* 404 */}
