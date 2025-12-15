@@ -348,6 +348,80 @@ const userApi = {
       throw error;
     }
   },
+
+  // ✅ NEW - Get tutor info by tutorId (TutorInfoResponse)
+  getTutorInfo: async (tutorId) => {
+    try {
+      console.log('=== getTutorInfo START ===');
+      console.log('tutorId:', tutorId);
+      
+      const response = await axios.get(
+        `${BASE_URL}/grabtutor/users/tutorInfo/${tutorId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      console.log('=== getTutorInfo SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('getTutorInfo error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // ✅ NEW - Update tutor info (TutorInfoResponse fields only)
+  updateTutorInfo: async (tutorData) => {
+    try {
+      console.log('=== updateTutorInfo START ===');
+      console.log('tutorData:', tutorData);
+      
+      // ✅ Get userId from user context or localStorage
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userId = user?.userId;
+      
+      console.log('userId from localStorage:', userId);
+      
+      if (!userId) {
+        throw new Error('❌ userId is missing - User not found');
+      }
+      
+      // ✅ Include userId in payload
+      const payload = {
+        userId: userId,  // ✅ ADD THIS - Backend requires userId
+        nationalId: tutorData.nationalId || '',
+        university: tutorData.university || '',
+        highestAcademicDegree: tutorData.highestAcademicDegree || '',
+        major: tutorData.major || ''
+      };
+      
+      console.log('=== Payload (with userId) ===');
+      console.log(JSON.stringify(payload, null, 2));
+      
+      const response = await axios.put(
+        `${BASE_URL}/grabtutor/users/updateTutorInfo`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('=== updateTutorInfo SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('=== updateTutorInfo ERROR ===');
+      console.error('Error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
 };
 
 

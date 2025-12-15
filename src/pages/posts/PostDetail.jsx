@@ -7,6 +7,7 @@ import postApi from '../../api/postApi';
 import reviewApi from '../../api/reviewApi';
 import ReviewForm from '../../components/ReviewForm';
 import TutorBidModal from '../../components/TutorBidModal';
+import ReviewFormModal from '../../components/ReviewFormModal'; // ✅ NEW
 
 export default function PostDetail() {
   const { postId } = useParams();
@@ -376,14 +377,16 @@ export default function PostDetail() {
 
       {/* ReviewForm Modal */}
       {showReviewForm && (
-        <ReviewForm
+        <ReviewFormModal
+          isOpen={showReviewForm}
           postId={postId}
           onClose={() => setShowReviewForm(false)}
           onSuccess={() => {
             setShowReviewForm(false);
-            fetchReview();
+            fetchReview(); // Reload review
           }}
           existingReview={review}
+          autoCloseSeconds={30}
         />
       )}
     </div>

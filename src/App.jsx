@@ -41,6 +41,7 @@ import TutorWallet from './pages/wallet/TutorWallet';
 import AdminInteractions from './pages/admin/AdminInteractions';
 import ReportDetail from './pages/admin/ReportDetail'; 
 import MyReports from './pages/MyReports';
+import AdminPosts from './pages/admin/AdminPosts';
 
 function App() {
   return (
@@ -75,7 +76,9 @@ function App() {
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['ADMIN']} />} />
           <Route path="/admin/users" element={<ProtectedRoute element={<AdminUsers />} allowedRoles={['ADMIN']} />} />
           <Route path="/admin/tutors" element={<ProtectedRoute element={<AdminTutors />} allowedRoles={['ADMIN']} />} />
+          <Route path="/admin/posts" element={<ProtectedRoute element={<AdminPosts />} allowedRoles={['ADMIN']} />} />
           <Route path="/admin/subjects" element={<ProtectedRoute element={<AdminSubjects />} allowedRoles={['ADMIN']} />} />
+          <Route path="/admin/interactions" element={<ProtectedRoute element={<AdminInteractions />} allowedRoles={['ADMIN']} />} />
 
           {/* Legacy routes - backward compatibility */}
           <Route path="/student/profile" element={<ProtectedRoute element={<StudentProfile />} allowedRoles={['USER']} />} />

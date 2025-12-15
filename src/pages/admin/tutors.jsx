@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import userApi from "../../api/userApi";
-import { FaArrowLeft, FaCheck, FaTimes, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import statisticApi from "../../api/statisticApi";
+import { FaArrowLeft, FaCheck, FaTimes, FaCheckCircle, FaTimesCircle, FaStar } from "react-icons/fa";
 
 export default function AdminTutors() {
   const navigate = useNavigate();
   const [tutors, setTutors] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [selectedStars, setSelectedStars] = useState(null);
   const [pageNo, setPageNo] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
@@ -17,6 +20,7 @@ export default function AdminTutors() {
 
   useEffect(() => {
     fetchTutors();
+    fetchReviewStats();
   }, [pageNo, pageSize]);
 
   const fetchTutors = async () => {
@@ -24,36 +28,25 @@ export default function AdminTutors() {
     try {
       const response = await userApi.getTutorRequests(pageNo, pageSize);
       
-      console.log('=== TUTOR REQUESTS RESPONSE ===');
-      console.log(JSON.stringify(response, null, 2));
-      
       let items = [];
-      if (response.data && Array.isArray(response.data.items)) {
+      if (response.data?.items && Array.isArray(response.data.items)) {
         items = response.data.items;
       } else if (Array.isArray(response.data)) {
         items = response.data;
       }
       
-      // Normalize snake_case từ Backend thành camelCase
-      const normalizedTutors = items.map((item) => {
-        console.log(`Processing tutor:`, item);
-        
-        return {
-          ...item,
-          // Normalize snake_case → camelCase
-          fullName: item.fullName || item.full_name || 'N/A',
-          phoneNumber: item.phoneNumber || item.phone_number || 'N/A',
-          nationalId: item.nationalId || item.national_id || 'N/A',
-          highestAcademicDegree: item.highestAcademicDegree || item.highest_academic_degree || 'N/A',
-          university: item.university || 'N/A',
-          major: item.major || 'N/A',
-          email: item.email || 'N/A',
-          dob: item.dob || item.date_of_birth || '',
-          role: item.role || 'TUTOR'
-        };
-      });
-      
-      console.log('Normalized tutors:', normalizedTutors);
+      const normalizedTutors = items.map((item) => ({
+        ...item,
+        fullName: item.fullName || item.full_name || 'N/A',
+        phoneNumber: item.phoneNumber || item.phone_number || 'N/A',
+        nationalId: item.nationalId || item.national_id || 'N/A',
+        highestAcademicDegree: item.highestAcademicDegree || item.highest_academic_degree || 'N/A',
+        university: item.university || 'N/A',
+        major: item.major || 'N/A',
+        email: item.email || 'N/A',
+        dob: item.dob || item.date_of_birth || '',
+        role: item.role || 'TUTOR'
+      }));
       
       setTutors(normalizedTutors);
       setTotalPages(response.data?.totalPages || 0);
@@ -66,12 +59,18 @@ export default function AdminTutors() {
     }
   };
 
-  // Phê duyệt yêu cầu gia sư
+  // ✅ NEW - Fetch review stars for filtering
+  const fetchReviewStats = async () => {
+    try {
+      const response = await statisticApi.getReviewStars(0, 100);
+      console.log('Review stats:', response);
+      setReviewStats(response?.data || response);
+    } catch (err) {
+      console.error('Error fetching review stats:', err);
+    }
+  };
+
   const handleApproveTutor = async (tutor) => {
-    console.log('=== handleApproveTutor ===');
-    console.log('Tutor object:', tutor);
-    console.log('tutor.requestId:', tutor.requestId);
-    
     const requestId = tutor.requestId;
     
     if (!requestId) {
@@ -79,7 +78,6 @@ export default function AdminTutors() {
       return;
     }
     
-    // Kiểm tra xem đã phê duyệt chưa
     const isApprovedStatus = tutor.status === 'APPROVED' || tutor.active === true;
     if (isApprovedStatus) {
       alert('Yêu cầu này đã được phê duyệt!');
@@ -88,9 +86,8 @@ export default function AdminTutors() {
     
     if (window.confirm(`Bạn có chắc chắn muốn phê duyệt gia sư ${tutor.fullName} không?`)) {
       try {
-        console.log('Gọi approveTutorRequest với requestId:', requestId);
         await userApi.approveTutorRequest(requestId);
-        alert('Phê duyệt thành công! Tài khoản đã được kích hoạt.');
+        alert('Phê duyệt thành công!');
         await fetchTutors();
       } catch (err) {
         alert('Lỗi khi phê duyệt gia sư!');
@@ -99,18 +96,12 @@ export default function AdminTutors() {
     }
   };
 
-  // Từ chối yêu cầu gia sư
   const handleRejectTutor = async (tutor) => {
-    console.log('=== handleRejectTutor ===');
-    console.log('Tutor object:', tutor);
-    console.log('tutor.requestId:', tutor.requestId);
-    
     if (!tutor.requestId) {
       alert('Lỗi: Không tìm thấy requestId!');
       return;
     }
     
-    // Kiểm tra xem đã phê duyệt chưa
     const isApprovedStatus = tutor.status === 'APPROVED' || tutor.active === true;
     if (isApprovedStatus) {
       alert('Không thể từ chối yêu cầu đã được phê duyệt!');
@@ -124,7 +115,6 @@ export default function AdminTutors() {
   const confirmReject = async () => {
     try {
       const requestId = selectedTutor.requestId;
-      console.log('Gọi rejectTutorRequest với requestId:', requestId);
       await userApi.rejectTutorRequest(requestId, rejectReason);
       alert('Từ chối thành công!');
       setShowModal(false);
@@ -144,17 +134,14 @@ export default function AdminTutors() {
     if (pageNo > 0) setPageNo(pageNo - 1);
   };
 
-  // Helper function để check xem đã được phê duyệt không
   const isApproved = (tutor) => {
     return tutor.status === 'APPROVED' || tutor.active === true;
   };
 
-  // Helper function để check field có dữ liệu không
   const hasData = (value) => {
     return value && value !== 'N/A' && value !== '';
   };
 
-  // Helper function để check xem có pending hay không
   const isPending = (tutor) => {
     return tutor.status === 'PENDING' || (!tutor.status && !tutor.active);
   };
@@ -176,7 +163,49 @@ export default function AdminTutors() {
           <h1 className="text-3xl font-bold">Quản lý Yêu cầu Gia sư</h1>
         </div>
       </div>
-      
+
+      {/* ✅ Review Stars Filter */}
+      {reviewStats && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Lọc theo Đánh giá</h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <button
+              onClick={() => setSelectedStars(null)}
+              className={`p-4 rounded-lg font-semibold transition-all ${
+                selectedStars === null
+                  ? 'bg-[#03ccba] text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:border-[#03ccba]'
+              }`}
+            >
+              Tất cả ({reviewStats?.total || 0})
+            </button>
+            {[5, 4, 3, 2, 1].map((stars) => (
+              <button
+                key={stars}
+                onClick={() => setSelectedStars(stars)}
+                className={`p-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                  selectedStars === stars
+                    ? 'bg-[#03ccba] text-white'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:border-[#03ccba]'
+                }`}
+              >
+                {[...Array(stars)].map((_, i) => (
+                  <FaStar key={i} size={16} />
+                ))}
+                ({reviewStats?.[`stars_${stars}`] || 0})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full">
           <thead className="bg-gray-100 border-b">
@@ -235,7 +264,22 @@ export default function AdminTutors() {
                   )}
                   <td className="px-6 py-3">
                     {isPending(tutor) ? (
-                      // Pending - hiển thị 2 button
+                      <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-semibold">
+                        Chờ xử lý
+                      </span>
+                    ) : isApproved(tutor) ? (
+                      <div className="inline-flex items-center gap-2">
+                        <FaCheckCircle className="text-green-600 text-lg" />
+                        <span className="text-sm font-medium text-green-600">Đã phê duyệt</span>
+                      </div>
+                    ) : (
+                      <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm">
+                        {tutor.status === 'APPROVED' ? 'Đã phê duyệt' : tutor.status === 'REJECTED' ? 'Đã từ chối' : 'Đã xử lý'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3">
+                    {isPending(tutor) ? (
                       <div className="space-x-2">
                         <button
                           onClick={() => handleApproveTutor(tutor)}
@@ -251,12 +295,8 @@ export default function AdminTutors() {
                         </button>
                       </div>
                     ) : (
-                      // Đã xử lý - hiển thị dấu tick
                       <div className="inline-flex items-center gap-2">
                         <FaCheckCircle className="text-green-600 text-lg" />
-                        <span className="text-sm font-medium text-green-600">
-                          {tutor.status === 'APPROVED' ? 'Đã phê duyệt' : tutor.status === 'REJECTED' ? 'Đã từ chối' : 'Đã xử lý'}
-                        </span>
                       </div>
                     )}
                   </td>
@@ -300,28 +340,28 @@ export default function AdminTutors() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h2 className="text-xl font-bold mb-4">Lý do từ chối</h2>
             <p className="mb-4 text-gray-600">
-              Từ chối yêu cầu của <strong>{selectedTutor?.fullName}</strong>
+              Bạn có chắc chắn muốn từ chối gia sư <strong>{selectedTutor?.fullName}</strong> không?
             </p>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Nhập lý do từ chối (tùy chọn)"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] mb-4"
+              placeholder="Nhập lý do từ chối (tùy chọn)..."
+              className="w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:border-[#03ccba]"
               rows={4}
             />
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowModal(false);
                   setRejectReason('');
                 }}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-900 rounded hover:bg-gray-400"
               >
                 Hủy
               </button>
               <button
                 onClick={confirmReject}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
               >
                 Xác nhận từ chối
               </button>
