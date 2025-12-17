@@ -1,28 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { FaArrowLeft, FaStar, FaUser, FaCalendar, FaBook, FaDollarSign } from 'react-icons/fa';
+import { FaArrowLeft, FaStar, FaUser, FaCalendar, FaBook, FaDollarSign, FaSpinner, FaCheck, FaCheckCircle } from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
 import reviewApi from '../../api/reviewApi';
-import ReviewForm from '../../components/ReviewForm';
-import TutorBidModal from '../../components/TutorBidModal';
-import ReviewFormModal from '../../components/ReviewFormModal'; // ✅ NEW
+import ReviewFormModal from '../../components/ReviewFormModal';
 
 export default function PostDetail() {
   const { postId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ✅ States
+  // ==================== STATES ====================
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [review, setReview] = useState(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [showBidModal, setShowBidModal] = useState(false);
-  const [subjects, setSubjects] = useState([]); // ✅ NEW: subjects list
+  const [subjects, setSubjects] = useState([]);
 
+  // ==================== EFFECTS ====================
+  
   // ✅ Fetch subjects on mount
   useEffect(() => {
     fetchSubjects();
@@ -83,6 +82,7 @@ export default function PostDetail() {
       }
 
       setPost(postData);
+      console.log('Post loaded:', postData);
     } catch (err) {
       console.error('Error fetching post:', err);
       setError(err.response?.data?.message || 'Failed to load post');
@@ -103,22 +103,8 @@ export default function PostDetail() {
   };
 
   // ==================== HANDLERS ====================
-  const handleBidSubmit = async (bidData) => {
-    try {
-      await postApi.tutorBid({
-        postId: parseInt(postId),
-        proposedPrice: bidData.price,
-        questionLevel: bidData.level,
-        description: bidData.description
-      });
-      alert('✅ Bid submitted successfully!');
-      setShowBidModal(false);
-    } catch (err) {
-      alert('❌ Error submitting bid: ' + err.message);
-    }
-  };
-
-  // ✅ NEW: Get subject name from subjectId
+  
+  // ✅ Get subject name from subjectId
   const getSubjectName = (subjectId) => {
     if (!subjectId) return 'Not specified';
     
@@ -131,12 +117,71 @@ export default function PostDetail() {
     return subject?.name || 'Unknown Subject';
   };
 
+  // ✅ Helper function - Get status badge color & icon
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'OPEN': {
+        icon: '🟢',
+        color: 'bg-green-100 text-green-700',
+        label: 'Open'
+      },
+      'REPORTED': {
+        icon: '🚩',
+        color: 'bg-red-100 text-red-700',
+        label: 'Reported'
+      },
+      'SOLVED': {
+        icon: '✅',
+        color: 'bg-emerald-100 text-emerald-700',
+        label: 'Solved'
+      },
+      'CLOSED': {
+        icon: '🔒',
+        color: 'bg-gray-100 text-gray-700',
+        label: 'Closed'
+      }
+    };
+
+    const statusInfo = statusMap[status] || statusMap['OPEN'];
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className={`px-4 py-2 rounded-full text-sm font-bold ${statusInfo.color} flex items-center gap-2`}>
+          {statusInfo.icon} {statusInfo.label}
+        </span>
+      </div>
+    );
+  };
+
+  // ✅ Helper function - Get status label
+  const getStatusLabel = (status) => {
+    const labels = {
+      'OPEN': 'Open',
+      'REPORTED': 'Reported',
+      'SOLVED': 'Solved',
+      'CLOSED': 'Closed'
+    };
+    return labels[status] || status || 'Unknown';
+  };
+
+  // ✅ Helper function - Get status color for text
+  const getStatusTextColor = (status) => {
+    const colors = {
+      'OPEN': 'text-green-600',
+      'REPORTED': 'text-red-600',
+      'SOLVED': 'text-emerald-600',
+      'CLOSED': 'text-gray-600'
+    };
+    return colors[status] || 'text-gray-600';
+  };
+
   // ==================== RENDER ====================
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+          <FaSpinner className="animate-spin text-5xl text-[#03ccba] mx-auto mb-4" />
           <p className="text-gray-600 text-lg">Loading post...</p>
         </div>
       </div>
@@ -163,12 +208,12 @@ export default function PostDetail() {
     );
   }
 
-  // ✅ Main Content
+  // ==================== MAIN RENDER ====================
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ✅ Header */}
+      {/* ==================== HEADER ==================== */}
       <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-8 px-4">
         <div className="max-w-7xl mx-auto">
           <button
@@ -185,11 +230,11 @@ export default function PostDetail() {
         </div>
       </div>
 
-      {/* ✅ Content */}
+      {/* ==================== CONTENT ==================== */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* ✅ Main Content - col span 2 */}
+          {/* ==================== MAIN CONTENT ==================== */}
           <div className="lg:col-span-2 space-y-8">
             
             {/* ✅ Post Image */}
@@ -287,40 +332,60 @@ export default function PostDetail() {
               </div>
             </div>
 
-            {/* ✅ Review Section */}
+            {/* ==================== REVIEW SECTION ==================== */}
             <div className="bg-white rounded-lg shadow-md p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">⭐ Review</h2>
-                {user && user.role === 'USER' && (
-                  <button
-                    onClick={() => setShowReviewForm(true)}
-                    className="px-4 py-2 bg-[#03ccba] text-white rounded-lg font-semibold hover:bg-[#02b5a5] transition-colors"
-                  >
-                    {review ? 'Edit Review' : 'Add Review'}
-                  </button>
-                )}
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">⭐ Review</h2>
 
               {review ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  {/* Stars Display */}
                   <div className="flex items-center gap-2">
                     {[...Array(5)].map((_, i) => (
                       <FaStar
                         key={i}
-                        size={20}
+                        size={24}
                         className={i < review.stars ? 'text-yellow-400' : 'text-gray-300'}
                       />
                     ))}
+                    <span className="ml-3 text-sm font-bold text-gray-700">
+                      {review.stars}/5 sao
+                    </span>
                   </div>
-                  <p className="text-gray-700">{review.description}</p>
+
+                  {/* Description Display */}
+                  {review.description && (
+                    <div>
+                      <p className="text-gray-700 leading-relaxed italic">
+                        "{review.description}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Date Display */}
+                  {review.createdAt && (
+                    <p className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                      Reviewed on {new Date(review.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  )}
                 </div>
               ) : (
-                <p className="text-gray-600 italic">No review yet. Be the first to review!</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-600 text-lg mb-4">
+                    😊 No review yet for this post
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    Complete a tutoring session to leave a review
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* ✅ Sidebar - Actions */}
+          {/* ==================== SIDEBAR ==================== */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-24 space-y-4">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
@@ -330,31 +395,30 @@ export default function PostDetail() {
                 {/* Student - Waiting for bids */}
                 {user && user.role === 'USER' && (
                   <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-                    <p className="text-blue-800 text-sm font-semibold">Waiting for tutor bids...</p>
+                    <p className="text-blue-800 text-sm font-semibold">
+                      ⏳ Waiting for tutor bids...
+                    </p>
                   </div>
                 )}
 
                 {/* Tutor - Submit Bid Button */}
                 {user && user.role === 'TUTOR' && post?.status === 'OPEN' && (
                   <button
-                    onClick={() => setShowBidModal(true)}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-bold flex items-center justify-center gap-2"
                   >
-                    🤝 Submit Bid
+                    <FaCheckCircle size={18} />
+                    💰 Submit Bid
                   </button>
                 )}
 
-                {/* Login Prompt */}
+                {/* Not logged in */}
                 {!user && (
-                  <div className="space-y-2">
-                    <p className="text-gray-600 text-sm">Login to submit a bid</p>
-                    <button
-                      onClick={() => navigate('/login-role')}
-                      className="w-full px-6 py-3 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] font-bold transition-colors"
-                    >
-                      Login
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => navigate('/login-role')}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-bold"
+                  >
+                    🔐 Login to Bid
+                  </button>
                 )}
               </div>
             </div>
@@ -362,20 +426,7 @@ export default function PostDetail() {
         </div>
       </div>
 
-      {/* ✅ Modals */}
-      {showBidModal && (
-        <TutorBidModal
-          isOpen={showBidModal}
-          onClose={() => setShowBidModal(false)}
-          onSuccess={() => {
-            setShowBidModal(false);
-            fetchPostDetail(); // Reload post
-          }}
-          post={post}  // ✅ IMPORTANT: Pass post object
-        />
-      )}
-
-      {/* ReviewForm Modal */}
+      {/* ==================== REVIEW FORM MODAL ==================== */}
       {showReviewForm && (
         <ReviewFormModal
           isOpen={showReviewForm}
@@ -386,7 +437,6 @@ export default function PostDetail() {
             fetchReview(); // Reload review
           }}
           existingReview={review}
-          autoCloseSeconds={30}
         />
       )}
     </div>

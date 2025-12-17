@@ -70,7 +70,7 @@ const reviewApi = {
     try {
       console.log('=== getReviewByPostId START ===');
       console.log('postId:', postId);
-      
+
       const response = await axios.get(
         `${BASE_URL}/reviews/post/${postId}`,
         {
@@ -83,28 +83,41 @@ const reviewApi = {
       console.log('=== getReviewByPostId SUCCESS ===');
       console.log('Full Response:', response.data);
       
-      let reviewData = response.data?.data || response.data;
+      // ✅ FIX: Handle new response structure
+      // Backend now returns: { success, data: { items: [...], pageNo, pageSize, totalPages } }
       
-      // Backend trả về Array, nhưng mỗi post chỉ có 1 review
-      if (Array.isArray(reviewData)) {
-        console.log('Array detected, length:', reviewData.length);
-        if (reviewData.length > 0) {
-          console.log('Returning first element:', reviewData[0]);
-          return reviewData[0];
+      let reviewData = response.data?.data;
+      
+      // ✅ Check if data.items is array
+      if (reviewData?.items && Array.isArray(reviewData.items)) {
+        console.log('✅ Items array found, length:', reviewData.items.length);
+        
+        // Return first item (mỗi post chỉ có 1 review)
+        if (reviewData.items.length > 0) {
+          const review = reviewData.items[0];
+          console.log('✅ Returning first review:', review);
+          return review;
         } else {
-          console.log('Array empty, returning null');
+          console.log('ℹ️ Empty items array, returning null');
           return null;
         }
       }
       
-      console.log('Already an object, returning as is');
-      return reviewData;
+      // ✅ Fallback: direct object (legacy format)
+      if (reviewData && typeof reviewData === 'object' && !Array.isArray(reviewData)) {
+        console.log('✅ Direct object found, returning:', reviewData);
+        return reviewData;
+      }
+      
+      console.log('ℹ️ No review data found');
+      return null;
+      
     } catch (error) {
       console.error('getReviewByPostId error:', error.response?.data || error.message);
       
-      // Nếu không có review (404 hoặc 500), return null
+      // ✅ Nếu không có review (404 hoặc 500), return null
       if (error.response?.status === 404 || error.response?.status === 500) {
-        console.log('No review found for this post (404/500)');
+        console.log('ℹ️ No review found for this post (404/500)');
         return null;
       }
       throw error;
@@ -115,6 +128,8 @@ const reviewApi = {
   getReviewByUserId: async (userId, pageNo = 0, pageSize = 10) => {
     try {
       console.log('=== getReviewByUserId START ===');
+      console.log('userId:', userId);
+      console.log('pageNo:', pageNo, 'pageSize:', pageSize);
       
       const response = await axios.get(
         `${BASE_URL}/reviews/sender/${userId}`,
@@ -127,9 +142,36 @@ const reviewApi = {
       );
       
       console.log('=== getReviewByUserId SUCCESS ===');
-      return response.data?.data || response.data;
+      console.log('Full Response:', JSON.stringify(response.data, null, 2));
+      
+      // ✅ FIX: API returns nested structure
+      // response.data = { success, message, data: { items, pageNo, pageSize, totalPages } }
+      // OR response.data = { data: { items, pageNo, pageSize, totalPages } }
+      // OR response.data = { pageNo, pageSize, totalPages, items } (direct)
+      
+      let responseData = response.data;
+      
+      // ✅ Extract from nested data
+      if (responseData?.data && typeof responseData.data === 'object') {
+        responseData = responseData.data;
+        console.log('✅ Extracted from data wrapper');
+      }
+      
+      // ✅ Check if items exists
+      if (responseData?.items && Array.isArray(responseData.items)) {
+        console.log('✅ Items found, length:', responseData.items.length);
+        console.log('📋 Total pages:', responseData.totalPages);
+        return responseData;
+      }
+      
+      // ✅ Fallback: return as-is
+      console.log('✅ Returning response data as-is');
+      return responseData;
+      
     } catch (error) {
-      console.error('getReviewByUserId error:', error.response?.data || error.message);
+      console.error('❌ getReviewByUserId error:', error);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
       throw error;
     }
   },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaWallet, FaArrowLeft, FaCheckCircle, FaExclamationTriangle, FaCopy } from 'react-icons/fa';
+import { FaWallet, FaArrowLeft, FaHistory, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import transactionApi from '../../api/transactionApi';
 import userApi from '../../api/userApi';
 import Navbar from '../../components/Navbar';
@@ -22,29 +22,44 @@ const TEST_CARD = {
   otp: '123456'
 };
 
+const DEBUG = true;
+
 export default function RechargeOptions() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // ==================== STATES ====================
+  // Recharge states
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showTestCard, setShowTestCard] = useState(false);
-  const [copiedField, setCopiedField] = useState(null);
-  const [balance, setBalance] = useState(null); // ✅ NEW: balance state
-  const [loadingBalance, setLoadingBalance] = useState(true); // ✅ NEW: loading state
+  const [balance, setBalance] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
+  
+  // Transaction history states
+  const [activeTab, setActiveTab] = useState('recharge'); // recharge, transactions
+  const [transactions, setTransactions] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [pageNo, setPageNo] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
-  // ✅ NEW: Fetch balance on mount
+  // ==================== EFFECTS ====================
   useEffect(() => {
     fetchBalance();
   }, []);
 
-  // ✅ NEW: Get balance from API
+  useEffect(() => {
+    if (activeTab === 'transactions') {
+      fetchMyTransactions();
+    }
+  }, [activeTab, pageNo]);
+
+  // ==================== API CALLS ====================
   const fetchBalance = async () => {
     try {
       setLoadingBalance(true);
       const response = await userApi.getMyBalance();
-      console.log('Balance response:', response);
-      
       const balanceAmount = response.data?.balance || 0;
       setBalance(balanceAmount);
     } catch (error) {
@@ -55,14 +70,41 @@ export default function RechargeOptions() {
     }
   };
 
-  // ✅ Copy to clipboard
-  const copyToClipboard = (text, fieldName) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    setTimeout(() => setCopiedField(null), 2000);
+  // ✅ Fetch my transactions
+  const fetchMyTransactions = async () => {
+    try {
+      setLoadingTransactions(true);
+      
+      if (DEBUG) console.log('📋 Fetching my transactions... pageNo:', pageNo);
+      
+      const response = await transactionApi.getMyUserTransactions(pageNo, pageSize);
+      
+      if (DEBUG) console.log('📋 Response:', response);
+      
+      let items = [];
+      let pages = 0;
+      
+      if (response?.data?.items && Array.isArray(response.data.items)) {
+        items = response.data.items;
+        pages = response.data.totalPages || 0;
+      } else if (response?.items && Array.isArray(response.items)) {
+        items = response.items;
+        pages = response.totalPages || 0;
+      }
+      
+      if (DEBUG) console.log('✅ Total transactions:', items.length);
+      
+      setTransactions(items);
+      setTotalPages(pages);
+    } catch (error) {
+      console.error('❌ Error fetching transactions:', error);
+      setTransactions([]);
+    } finally {
+      setLoadingTransactions(false);
+    }
   };
 
-  // ✅ Handle recharge - direct API call
+  // ✅ Update handleRecharge function
   const handleRecharge = async (amount) => {
     try {
       setLoading(true);
@@ -70,7 +112,6 @@ export default function RechargeOptions() {
       
       console.log('Processing recharge:', amount);
       
-      // ✅ Validate amount
       if (amount < 50000) {
         setError('Minimum recharge amount is 50,000 VNĐ');
         setLoading(false);
@@ -83,14 +124,37 @@ export default function RechargeOptions() {
         return;
       }
       
-      // ✅ Call API to get VNPay URL
       const response = await transactionApi.startTransaction(amount);
       
       console.log('API Response:', response);
       
+      // ✅ FIX: Check if response.data is VNPay URL (string) or transaction data (object)
       if (response.success && response.data) {
-        // ✅ Redirect to VNPay immediately
-        window.location.href = response.data;
+        // ✅ Case 1: response.data is a VNPay URL string (old behavior)
+        if (typeof response.data === 'string' && response.data.includes('vnpay')) {
+          console.log('🔗 Redirecting to VNPay URL...');
+          window.location.href = response.data;
+        } 
+        // ✅ Case 2: response.data is transaction object (new backend behavior)
+        else if (typeof response.data === 'object' && response.data.id) {
+          console.log('✅ Transaction completed!', response.data);
+          
+          // ✅ Store transaction data for PaymentSuccess page
+          const transactionInfo = {
+            txnId: response.data.id,
+            amount: response.data.amount,
+            status: response.data.status,
+            timestamp: response.data.completedAt || new Date().toISOString()
+          };
+          
+          // ✅ Save to sessionStorage for retrieval on PaymentSuccess
+          sessionStorage.setItem('paymentTransaction', JSON.stringify(transactionInfo));
+          
+          // ✅ Redirect to PaymentSuccess page
+          navigate('/wallet/payment-success', { 
+            state: { transactionData: transactionInfo }
+          });
+        }
       } else {
         setError(response.message || 'Error initiating transaction');
       }
@@ -102,12 +166,6 @@ export default function RechargeOptions() {
     }
   };
 
-  // ✅ Handle preset amount
-  const handleSelectAmount = async (amount) => {
-    await handleRecharge(amount);
-  };
-
-  // ✅ Handle custom amount
   const handleCustomAmount = async () => {
     if (!customAmount.trim()) {
       setError('Please enter an amount');
@@ -124,135 +182,198 @@ export default function RechargeOptions() {
     await handleRecharge(amount);
   };
 
+  // ✅ Helper functions for transaction display
+  const getTransactionTypeInfo = (type) => {
+    const types = {
+      'ANSWER_COMPLETED': { icon: '✅', label: 'Answer Completed', color: 'bg-green-100 text-green-800' },
+      'COURSE_ENROLLED': { icon: '📚', label: 'Course Enrolled', color: 'bg-blue-100 text-blue-800' },
+      'RECHARGE': { icon: '💰', label: 'Recharge', color: 'bg-purple-100 text-purple-800' },
+      'WITHDRAWAL': { icon: '💸', label: 'Withdrawal', color: 'bg-orange-100 text-orange-800' },
+      'PAYMENT': { icon: '💳', label: 'Payment', color: 'bg-indigo-100 text-indigo-800' },
+      'DEFAULT': { icon: '📊', label: 'Transaction', color: 'bg-gray-100 text-gray-800' }
+    };
+    return types[type] || types['DEFAULT'];
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'SUCCESS': 'bg-green-100 text-green-800',
+      'FAILED': 'bg-red-100 text-red-800',
+      'PENDING': 'bg-yellow-100 text-yellow-800',
+      'DEFAULT': 'bg-gray-100 text-gray-800'
+    };
+    return colors[status] || colors['DEFAULT'];
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handlePrevPage = () => {
+    if (pageNo > 0) setPageNo(pageNo - 1);
+  };
+
+  const handleNextPage = () => {
+    if (pageNo < totalPages - 1) setPageNo(pageNo + 1);
+  };
+
+  // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
       <Navbar />
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-            >
-              <FaArrowLeft size={24} />
-            </button>
-            <div>
-              <h1 className="text-4xl font-bold">Recharge Wallet</h1>
-              <p className="text-teal-100 mt-2">Add money to your account</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="max-w-7xl mx-auto px-4 py-12">
         
-        {/* ✅ NEW: Current Balance Section - TOP */}
-        <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl shadow-lg p-8 border-2 border-green-300">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-gray-600 font-semibold text-sm mb-2">💳 Current Balance</p>
-              {loadingBalance ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin h-6 w-6 border-2 border-green-500 border-t-transparent rounded-full"></div>
-                  <p className="text-gray-600">Loading...</p>
-                </div>
-              ) : (
-                <p className="text-5xl font-bold text-green-600">
-                  {balance?.toLocaleString('vi-VN')} VNĐ
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <FaCheckCircle className="text-green-600 text-4xl" />
-              <div>
-                <p className="text-green-700 font-semibold">Ready to add funds</p>
-                <p className="text-green-600 text-sm">Instant funding available</p>
-              </div>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-8">
+          <button
+            onClick={() => navigate('/posts')}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+          >
+            <FaArrowLeft /> Back
+          </button>
+          <h1 className="text-3xl font-bold">💰 Recharge Wallet</h1>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-8">
-            <p className="text-red-700 font-semibold">❌ {error}</p>
+          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-8 flex items-start gap-3">
+            <FaExclamationTriangle className="text-red-600 text-lg flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-700 font-semibold">Error</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
           </div>
         )}
 
-        {/* ✅ MAIN SECTION - Matching Layout from Image */}
-        <div className="bg-white rounded-2xl shadow-lg p-12 mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Recharge Amount</h2>
-          
-          {/* ✅ Matching the image layout - Label on top, Input below */}
-          <div className="mb-12">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Amount (VNĐ)
-            </label>
-            <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <input
-                  type="number"
-                  value={customAmount}
-                  onChange={(e) => {
-                    setCustomAmount(e.target.value);
-                    setError(null);
-                  }}
-                  min="50000"
-                  step="10000"
-                  max="50000000"
-                  placeholder="Minimum 50,000 VNĐ"
-                  className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none text-lg font-semibold"
-                  disabled={loading}
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  From 50,000 to 50,000,000 VNĐ
-                </p>
-              </div>
-              
-              {/* ✅ Recharge Button - Right side */}
-              <button
-                onClick={handleCustomAmount}
-                disabled={loading || !customAmount}
-                className="px-10 py-4 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap h-16"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FaWallet /> Recharge
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Preset Amounts */}
-          <div className="border-t pt-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Select</h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {RECHARGE_OPTIONS.map((option) => (
-                <button
-                  key={option.amount}
-                  onClick={() => handleSelectAmount(option.amount)}
-                  disabled={loading}
-                  className="p-4 border-2 border-gray-200 rounded-lg hover:border-[#03ccba] hover:bg-[#03ccba] hover:bg-opacity-5 transition-all font-bold text-sm text-gray-900 hover:text-[#03ccba] disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex gap-4 mb-8 border-b border-gray-200 flex-wrap">
+          <button
+            onClick={() => { setActiveTab('recharge'); setPageNo(0); }}
+            className={`pb-4 px-4 font-bold text-lg transition-colors border-b-2 ${
+              activeTab === 'recharge'
+                ? 'text-blue-600 border-blue-600'
+                : 'text-gray-600 border-transparent hover:text-gray-900'
+            }`}
+          >
+            <FaWallet className="inline mr-2" size={18} />
+            Recharge
+          </button>
+          <button
+            onClick={() => { setActiveTab('transactions'); setPageNo(0); }}
+            className={`pb-4 px-4 font-bold text-lg transition-colors border-b-2 ${
+              activeTab === 'transactions'
+                ? 'text-blue-600 border-blue-600'
+                : 'text-gray-600 border-transparent hover:text-gray-900'
+            }`}
+          >
+            <FaHistory className="inline mr-2" size={18} />
+            History
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Info Cards */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* ==================== RECHARGE TAB ==================== */}
+        {activeTab === 'recharge' && (
+          <div className="space-y-8">
+            {/* Balance Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Balance</h2>
+              
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-8 border-2 border-blue-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full flex items-center justify-center">
+                    <FaWallet className="text-white text-2xl" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm font-semibold mb-1">Available Balance</p>
+                    {loadingBalance ? (
+                      <div className="animate-pulse h-8 bg-gray-300 rounded w-32"></div>
+                    ) : (
+                      <p className="text-4xl font-bold text-blue-600">
+                        {balance?.toLocaleString('vi-VN')}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">VNĐ</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recharge Form */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Recharge Amount</h2>
+              
+              {/* Custom Amount Input */}
+              <div className="mb-8">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Amount (VNĐ)
+                </label>
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      value={customAmount}
+                      onChange={(e) => {
+                        setCustomAmount(e.target.value);
+                        setError(null);
+                      }}
+                      min="50000"
+                      step="10000"
+                      max="50000000"
+                      placeholder="Minimum 50,000 VNĐ"
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-2 focus:ring-blue-600 focus:ring-opacity-30 outline-none text-lg font-semibold"
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      From 50,000 to 50,000,000 VNĐ
+                    </p>
+                  </div>
+                  
+                  {/* Recharge Button */}
+                  <button
+                    onClick={handleCustomAmount}
+                    disabled={loading || !customAmount}
+                    className="px-10 py-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap h-16"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FaWallet /> Recharge
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Select */}
+              <div className="border-t pt-8">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Select</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {RECHARGE_OPTIONS.map((option) => (
+                    <button
+                      key={option.amount}
+                      onClick={() => handleRecharge(option.amount)}
+                      disabled={loading}
+                      className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all font-bold text-sm text-gray-900 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-blue-50 rounded-2xl shadow-lg p-6 border-l-4 border-blue-400">
@@ -270,73 +391,124 @@ export default function RechargeOptions() {
               </div>
             </div>
 
-            {/* Step Guide */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl shadow-lg p-8 border-l-4 border-green-500">
-              <div className="flex gap-4">
-                <FaCheckCircle className="text-green-600 text-2xl flex-shrink-0 mt-1" />
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-3">✅ How to Recharge</h4>
-                  <ol className="text-gray-700 text-sm space-y-2 list-decimal list-inside">
-                    <li>Enter amount or select quick option</li>
-                    <li>Click "Recharge" button</li>
-                    <li>You'll be redirected to VNPay payment gateway</li>
-                    <li>Use test card info from the right</li>
-                    <li>Complete the payment</li>
-                    <li>Funds appear in your wallet instantly</li>
-                  </ol>
+            {/* Test Card Info */}
+            <div className="bg-amber-50 rounded-2xl shadow-lg p-6 border-l-4 border-amber-400">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">💳 Test Card Info</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg p-3">
+                  <p className="text-xs text-gray-600 font-semibold mb-1">Bank</p>
+                  <p className="text-sm font-bold text-gray-900">{TEST_CARD.bank}</p>
                 </div>
+                <div className="bg-white rounded-lg p-3">
+                  <p className="text-xs text-gray-600 font-semibold mb-1">Card Number</p>
+                  <p className="text-sm font-mono font-bold text-gray-900">{TEST_CARD.cardNumber}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3">
+                  <p className="text-xs text-gray-600 font-semibold mb-1">Cardholder</p>
+                  <p className="text-sm font-bold text-gray-900">{TEST_CARD.cardHolder}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3">
+                  <p className="text-xs text-gray-600 font-semibold mb-1">Expiry & OTP</p>
+                  <p className="text-sm font-bold text-gray-900">{TEST_CARD.expiry} / {TEST_CARD.otp}</p>
+                </div>
+              </div>
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-xs text-yellow-800 mt-4">
+                <p className="font-semibold mb-1">📌 Testing Only</p>
+                <p>Won't charge real account</p>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Right Column - Test Card Info (Sticky) */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-20">
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-amber-300">
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">💳</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900">Test Card</h3>
-                </div>
+        {/* ==================== TRANSACTIONS TAB ==================== */}
+        {activeTab === 'transactions' && (
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Transaction History</h2>
 
-                {/* Quick Info */}
-                <div className="space-y-3">
-                  {/* Bank */}
-                  <div className="bg-white rounded-lg p-3">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Bank</p>
-                    <p className="text-sm font-bold text-gray-900">{TEST_CARD.bank}</p>
-                  </div>
-                </div>
-
-                {/* Info Alert */}
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-xs text-yellow-800 mt-4">
-                  <p className="font-semibold mb-1">📌 Testing Only</p>
-                  <p>Won't charge real account</p>
-                </div>
-
-              {/* FAQ Sidebar */}
-              <div className="bg-white rounded-2xl shadow-lg p-6 mt-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">❓ FAQ</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="font-bold text-gray-900 text-xs">How much?</p>
-                    <p className="text-gray-600 text-xs">50K - 50M VNĐ</p>
-                  </div>
-                  <div className="border-t pt-3">
-                    <p className="font-bold text-gray-900 text-xs">Safe?</p>
-                    <p className="text-gray-600 text-xs">Yes! VNPay secure</p>
-                  </div>
-                  <div className="border-t pt-3">
-                    <p className="font-bold text-gray-900 text-xs">Speed?</p>
-                    <p className="text-gray-600 text-xs">Instant</p>
-                  </div>
-                </div>
+            {loadingTransactions ? (
+              <div className="flex justify-center py-16">
+                <FaSpinner className="animate-spin text-4xl text-blue-600" />
               </div>
+            ) : transactions.length > 0 ? (
+              <>
+                {/* Table */}
+                <div className="overflow-x-auto mb-6">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200 bg-gray-50">
+                        <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Date</th>
+                        <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Type</th>
+                        <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Amount</th>
+                        <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((tx, index) => {
+                        const typeInfo = getTransactionTypeInfo(tx.transactionType);
+                        const statusColor = getStatusColor(tx.status);
+                        
+                        return (
+                          <tr key={tx.id || index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-gray-600">
+                              {formatDate(tx.createdAt)}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${typeInfo.color}`}>
+                                {typeInfo.icon} {typeInfo.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm font-bold text-green-600">
+                              +{tx.amount?.toLocaleString('vi-VN')} VNĐ
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusColor}`}>
+                                {tx.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600">
+                              {tx.postId ? `Post: ${tx.postId.substring(0, 8)}...` : 
+                               tx.courseId ? `Course: ${tx.courseId.substring(0, 8)}...` : 
+                               'N/A'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-4 mt-6 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={pageNo === 0}
+                      className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 font-semibold"
+                    >
+                      ← Previous
+                    </button>
+                    <span className="px-4 py-2 font-semibold text-gray-700">
+                      Page {pageNo + 1} / {totalPages}
+                    </span>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={pageNo >= totalPages - 1}
+                      className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 font-semibold"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-16">
+                <FaHistory className="text-gray-300 text-5xl mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">No transactions yet</p>
               </div>
-            </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

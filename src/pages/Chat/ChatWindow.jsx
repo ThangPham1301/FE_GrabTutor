@@ -6,8 +6,9 @@ import reportApi from '../../api/reportApi';
 import { 
   FaArrowLeft, FaSpinner, FaTrash, FaPaperPlane, FaEllipsisV, FaPaperclip, 
   FaTimes, FaFileAlt, FaImage, FaDownload, FaCheckCircle, FaClock, FaCheck,
-  FaPhone, FaEnvelope, FaUser, FaFlag
+  FaPhone, FaEnvelope, FaUser, FaFlag,FaStar
 } from 'react-icons/fa';
+import ReviewFormModal from '../../components/ReviewFormModal';
 
 const DEBUG = true;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -47,6 +48,10 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
   
   // ✅ Image modal
   const [selectedImage, setSelectedImage] = useState(null);
+
+  // ✅ NEW - Review form state
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [existingReview, setExistingReview] = useState(null);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -808,6 +813,46 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ==================== REVIEW BUTTON (CONFIRMED or RESOLVED_NORMAL) ==================== */}
+      {(roomStatus === 'CONFIRMED' || roomStatus === 'RESOLVED_NORMAL') && user?.role === 'USER' && (
+        <div className="px-4 py-3 bg-green-50 border-b border-green-200 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-green-800 font-semibold">
+            <FaCheckCircle size={18} />
+            🔒 Chat đã kết thúc
+          </div>
+          <button
+            onClick={() => setShowReviewForm(true)}
+            className="px-4 py-2 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg font-semibold transition-all flex items-center gap-2"
+          >
+            <FaStar size={16} />
+            ⭐ Review
+          </button>
+        </div>
+      )}
+
+      {/* CHAT ENDED - No review button for TUTOR */}
+      {(roomStatus === 'CONFIRMED' || roomStatus === 'RESOLVED_NORMAL') && user?.role === 'TUTOR' && (
+        <div className="px-4 py-3 bg-green-50 border-b border-green-200 text-green-800 font-semibold flex items-center gap-2">
+          <FaCheckCircle size={18} />
+          🔒 Chat đã kết thúc
+        </div>
+      )}
+
+      {/* ==================== REVIEW FORM MODAL (No countdown) ==================== */}
+      {showReviewForm && (
+        <ReviewFormModal
+          isOpen={showReviewForm}
+          postId={conversation.postId}
+          onClose={() => setShowReviewForm(false)}
+          onSuccess={() => {
+            console.log('✅ Review submitted successfully');
+            setShowReviewForm(false);
+            onRefresh?.();
+          }}
+          existingReview={existingReview}
+        />
       )}
     </div>
   );

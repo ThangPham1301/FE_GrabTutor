@@ -91,6 +91,32 @@ const statisticApi = {
       console.error('❌ getReviewStars error:', error.response?.data || error.message);
       throw error;
     }
+  },
+
+  // ✅ NEW - GET revenue and profit statistics by year
+  getRevenueProfit: async (year = new Date().getFullYear()) => {
+    try {
+      console.log('=== getRevenueProfit START ===');
+      console.log('year:', year);
+      
+      const response = await axios.get(
+        `${BASE_URL}/statistic/revenue-profit`,
+        {
+          params: {
+            year: year
+          },
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      console.log('✅ getRevenueProfit SUCCESS:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ getRevenueProfit error:', error.response?.data || error.message);
+      throw error;
+    }
   }
 };
 

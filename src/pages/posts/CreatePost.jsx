@@ -14,13 +14,38 @@ const DEBUG = true;
 
 // ==================== POST CARD COMPONENT ====================
 function PostCard({ post, subjects, onClick }) {
+  // ✅ Helper functions - Add all status types
   const getStatusColor = (status) => {
     const colors = {
       'OPEN': 'bg-green-100 text-green-700 border-green-300',
       'IN_PROGRESS': 'bg-blue-100 text-blue-700 border-blue-300',
+      'REPORTED': 'bg-red-100 text-red-700 border-red-300',
+      'SOLVED': 'bg-emerald-100 text-emerald-700 border-emerald-300',
       'CLOSED': 'bg-gray-100 text-gray-700 border-gray-300'
     };
-    return colors[status] || 'bg-gray-100 text-gray-700 border-gray-300';
+    return colors[status] || 'bg-blue-100 text-blue-700 border-blue-300';
+  };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      'OPEN': '🟢',
+      'IN_PROGRESS': '🔵',
+      'REPORTED': '🚩',
+      'SOLVED': '✅',
+      'CLOSED': '🔒'
+    };
+    return icons[status] || '❓';
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'OPEN': 'Open',
+      'IN_PROGRESS': 'In Progress',
+      'REPORTED': 'Reported',
+      'SOLVED': 'Solved',
+      'CLOSED': 'Closed'
+    };
+    return labels[status] || status || 'Unknown';
   };
 
   // ✅ Lấy subject name từ subjectId
@@ -75,7 +100,7 @@ function PostCard({ post, subjects, onClick }) {
 
         {/* ✅ Status Badge - Top Left */}
         <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 ${getStatusColor(post.status || 'OPEN')}`}>
-          {post.status === 'OPEN' ? '🟢 Open' : post.status === 'IN_PROGRESS' ? '🔵 In Progress' : '🔴 Closed'}
+          {getStatusIcon(post.status || 'OPEN')} {getStatusLabel(post.status || 'OPEN')}
         </div>
       </div>
 

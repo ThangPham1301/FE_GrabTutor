@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaSpinner, FaFlag, FaCalendar, FaUser, FaExternalLinkAlt, FaCheckCircle, FaClock } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import reportApi from '../api/reportApi';
 
-const DEBUG = true;
-
 export default function MyReports() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   
+  // ✅ Get role from query param
+  const queryRole = searchParams.get('role');
+  
+  // ✅ Determine if TUTOR viewing received reports
+  const isTutorViewingReceived = queryRole === 'tutor' && user?.role === 'TUTOR';
+
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,45 +24,92 @@ export default function MyReports() {
   const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
+    // ✅ Allow cả USER và TUTOR
     if (!user || !['USER', 'TUTOR'].includes(user.role)) {
       navigate('/login');
       return;
     }
     fetchReports();
-  }, [user, pageNo]);
+  }, [user, pageNo, queryRole]);
 
-  // ✅ Fetch Reports
+  // ==================== API CALLS ====================
   const fetchReports = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      console.log('=== fetchReports START ===');
+      console.log('userId:', user.userId);
+      console.log('User role:', user.role);
+      console.log('isTutorViewingReceived:', isTutorViewingReceived);
+      console.log('pageNo:', pageNo, 'pageSize:', pageSize);
+
       let response;
-      
+
+      // ✅ STUDENT - My Reports Sent
       if (user.role === 'USER') {
-        // ✅ Student: Get reports sent by him/her
+        console.log('📤 Fetching STUDENT reports sent...');
         response = await reportApi.getReportBySenderId(user.userId, pageNo, pageSize);
-      } else if (user.role === 'TUTOR') {
-        // ✅ Tutor: Get reports received (against him/her)
+      }
+      // ✅ TUTOR - My Reports Sent (default)
+      else if (user.role === 'TUTOR' && !isTutorViewingReceived) {
+        console.log('📤 Fetching TUTOR reports sent...');
+        response = await reportApi.getReportBySenderId(user.userId, pageNo, pageSize);
+      }
+      // ✅ TUTOR - Reports Received (when ?role=tutor)
+      else if (user.role === 'TUTOR' && isTutorViewingReceived) {
+        console.log('📥 Fetching TUTOR reports received...');
         response = await reportApi.getReportByReceivedId(user.userId, pageNo, pageSize);
       }
 
-      if (DEBUG) console.log('Reports response:', response);
+      console.log('=== fetchReports SUCCESS ===');
+      console.log('Full Response:', JSON.stringify(response, null, 2));
 
       let reportList = [];
-      if (response?.data?.items && Array.isArray(response.data.items)) {
-        reportList = response.data.items;
-      } else if (response?.data && Array.isArray(response.data)) {
-        reportList = response.data;
-      } else if (Array.isArray(response)) {
-        reportList = response;
+      let totalPagesValue = 0;
+
+      // ✅ Handle response structure
+      if (response?.data) {
+        if (response.data.items && Array.isArray(response.data.items)) {
+          reportList = response.data.items;
+          totalPagesValue = response.data.totalPages || 0;
+          console.log('✅ Found items in response.data.items, length:', reportList.length);
+        } else if (response.data.data?.items) {
+          reportList = response.data.data.items;
+          totalPagesValue = response.data.data.totalPages || 0;
+          console.log('✅ Found items in response.data.data.items, length:', reportList.length);
+        }
+      } else if (Array.isArray(response?.items)) {
+        reportList = response.items;
+        totalPagesValue = response.totalPages || 0;
+        console.log('✅ Found direct items array, length:', reportList.length);
       }
 
+      console.log('📋 Total reports:', reportList.length);
+      reportList.forEach((report, idx) => {
+        console.log(`[Report ${idx}]:`);
+        console.log('  - id:', report.id);
+        console.log('  - detail:', report.detail?.substring(0, 50));
+        console.log('  - reportStatus:', report.reportStatus);
+        console.log('  - createdAt:', report.createdAt);
+      });
+
       setReports(reportList);
-      setTotalPages(response?.totalPages || 1);
+      setTotalPages(totalPagesValue);
+
+      if (reportList.length === 0) {
+        console.log('⚠️ No reports found');
+      }
     } catch (err) {
-      console.error('Error fetching reports:', err);
-      setError(err.response?.data?.message || err.message);
+      console.error('❌ Error fetching reports:', err);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Không thể tải reports'
+      );
       setReports([]);
     } finally {
       setLoading(false);

@@ -85,7 +85,7 @@ const reportApi = {
   getReportByReceivedId: async (receiverId, pageNo = 0, pageSize = 10) => {
     try {
       console.log('=== getReportByReceivedId START ===');
-      console.log('receiverId:', receiverId);
+      console.log('receiverId:', receiverId);  // ✅ Log này sẽ show user ID gửi đi
       
       const response = await axios.get(
         `${BASE_URL}/reports/user/receiver/${receiverId}`,
@@ -103,6 +103,10 @@ const reportApi = {
       
       console.log('=== getReportByReceivedId SUCCESS ===');
       console.log('Response:', response.data);
+      
+      // ✅ Thêm log để kiểm tra items
+      console.log('Items count:', response.data?.data?.items?.length || 0);
+      
       return response.data?.data || response.data;
     } catch (error) {
       console.error('getReportByReceivedId error:', error.response?.data || error.message);

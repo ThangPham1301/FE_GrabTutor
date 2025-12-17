@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { 
   FaHome, FaPlus, FaUser, FaKey, FaCoins, FaSignOutAlt, FaBars, FaTimes, 
   FaFolderOpen, FaBook, FaChalkboard, FaStar, FaChartLine, FaWallet, 
-  FaHandshake, FaComments, FaChevronDown, FaBox
+  FaHandshake, FaComments, FaChevronDown, FaBox, FaChartBar, FaFlag,
 } from 'react-icons/fa';
 import PostBidsDropdown from './PostBidsDropdown';
 import NotificationBell from './NotificationBell';
@@ -150,24 +150,95 @@ export default function Navbar() {
                       <p className="text-xs text-gray-600">Track your courses</p>
                     </div>
                   </button>
+                {/* ✅ NEW - My Reviews */}
+                      <button
+                        onClick={() => navigate('/posts/my-reviews')}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-100"
+                      >
+                        <FaStar size={16} className="text-yellow-400" />
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900">My Reviews</p>
+                          <p className="text-xs text-gray-600">Reviews you've written</p>
+                        </div>
+                      </button>
+                {/* ✅ NEW - My Reports */}
+                    <button
+                      onClick={() => navigate('/my-reports')}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-100"
+                    >
+                      <FaFlag size={16} className="text-red-600" />
+                      <div>
+                        <p className="font-semibold text-sm text-gray-900">My Reports</p>
+                        <p className="text-xs text-gray-600">Reports submitted</p>
+                      </div>
+                    </button>
                 </div>
               </div>
             )}
+            
+       {/* ✅ NEW - Inventory Dropdown - TUTOR ONLY */}
+{user && user.role === 'TUTOR' && (
+  <div className="relative group">
+    <button className="flex items-center gap-2 text-gray-700 hover:text-[#03ccba] transition-colors font-medium">
+      <FaBox size={18} />
+      Inventory
+      <FaChevronDown size={12} />
+    </button>
 
-            {/* Tutor Courses - Tutor Only */}
-            {user && user.role === 'TUTOR' && (
-              <Link to="/courses/inventory" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors flex items-center gap-2">
-                <FaBook size={18} />
-                My Courses
-              </Link>
-            )}
+    {/* Dropdown Menu */}
+    <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top z-50">
+      
+      {/* My Courses */}
+      <button
+        onClick={() => navigate('/courses/inventory')}
+        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+      >
+        <FaBook size={16} className="text-blue-600" />
+        <div>
+          <p className="font-semibold text-sm text-gray-900">My Courses</p>
+          <p className="text-xs text-gray-600">Manage your courses</p>
+        </div>
+      </button>
 
-            {/* ✅ Bids Dropdown - Tutor Only */}
-            {user && user.role === 'TUTOR' && (
-              <Link to="/posts/my-bids" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors flex items-center gap-2">
-                <FaHandshake size={18} />
-                My Bids
-              </Link>
+      {/* My Bids */}
+      <button
+        onClick={() => navigate('/posts/my-bids')}
+        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-100"
+      >
+        <FaHandshake size={16} className="text-green-600" />
+        <div>
+          <p className="font-semibold text-sm text-gray-900">My Bids</p>
+          <p className="text-xs text-gray-600">Your submitted bids</p>
+        </div>
+      </button>
+
+      {/* My Received Reviews */}
+      <button
+        onClick={() => navigate('/reviews/received')}
+        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-100"
+      >
+        <FaStar size={16} className="text-yellow-400" />
+        <div>
+          <p className="font-semibold text-sm text-gray-900">My Reviews</p>
+          <p className="text-xs text-gray-600">Reviews from students</p>
+        </div>
+      </button>
+      <button
+        onClick={() => navigate('/my-reports?role=tutor')}
+        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors border-t border-gray-100"
+      >
+        <FaFlag size={16} className="text-orange-600" />
+        <div>
+          <p className="font-semibold text-sm text-gray-900">My Reports</p>
+          <p className="text-xs text-gray-600">Reports about you</p>
+        </div>
+      </button>
+    </div>
+  </div>
+)}
+            {/* ✅ NEW - NOTIFICATION BELL */}
+            {user && (
+              <NotificationBell />
             )}
 
             {/* User Menu Dropdown */}
@@ -199,16 +270,6 @@ export default function Navbar() {
                           <p className="text-xs text-teal-100">{user.email}</p>
                         </div>
                       </div>
-                    </div>
-
-                    {/* ✅ NOTIFICATIONS SECTION */}
-                    <div className="border-b border-gray-100 p-4">
-                      <NotificationBell />
-                    </div>
-
-                    {/* ✅ MY REPORTS SECTION - NEW! */}
-                    <div className="border-b border-gray-100 p-4">
-                      <MyReportsDropdown />
                     </div>
 
                     {/* ✅ TUTOR WALLET - Inside Dropdown */}
@@ -413,26 +474,37 @@ export default function Navbar() {
               </>
             )}
 
+            {/* Tutor Inventory - Tutor Only */}
             {user && user.role === 'TUTOR' && (
               <>
                 <button
-                  onClick={() => {
-                    navigate('/courses/inventory');
-                    setIsMobileMenuOpen(false);
-                  }}
+                  onClick={() => setIsInventoryOpen(!isInventoryOpen)}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
                 >
-                  My Courses
+                  Inventory {isInventoryOpen ? '▼' : '▶'}
                 </button>
-                <button
-                  onClick={() => {
-                    navigate('/posts/my-bids');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors"
-                >
-                  My Bids
-                </button>
+                {isInventoryOpen && (
+                  <>
+                    <button
+                      onClick={() => {
+                        navigate('/courses/inventory');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-8 py-2 text-sm text-gray-600 hover:text-[#03ccba] transition-colors"
+                    >
+                      My Courses
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/posts/my-bids');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-8 py-2 text-sm text-gray-600 hover:text-[#03ccba] transition-colors"
+                    >
+                      My Bids
+                    </button>
+                  </>
+                )}
               </>
             )}
 

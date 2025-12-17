@@ -42,6 +42,10 @@ import AdminInteractions from './pages/admin/AdminInteractions';
 import ReportDetail from './pages/admin/ReportDetail'; 
 import MyReports from './pages/MyReports';
 import AdminPosts from './pages/admin/AdminPosts';
+import MyReviews from './pages/posts/MyReviews';
+import MyReceivedReviews from './pages/posts/MyReceivedReviews';
+import PaymentSuccess from "./pages/wallet/PaymentSuccess";
+import AdminTransactions from './pages/admin/AdminTransactions';
 
 function App() {
   return (
@@ -66,8 +70,11 @@ function App() {
           <Route path="/posts/:postId/report" element={<ReportPost />} />
           <Route path="/posts/:postId" element={<PostDetail />} />
           <Route path="/all-posts" element={<AllPosts />} />
+          {/* Wallet Routes */}
           <Route path="/wallet/recharge" element={<ProtectedRoute element={<RechargeOptions />} allowedRoles={['USER', 'TUTOR']} />} />
           <Route path="/wallet/recharge/payment" element={<PaymentProcess />} />
+          {/* ✅ NEW - Payment Success Route */}
+          <Route path="/wallet/payment-success" element={<PaymentSuccess />} />
 
           {/* ✅ Dynamic Profile Route - Routes theo role */}
           <Route path="/profile" element={<ProtectedRoute element={<ProfileRouter />} allowedRoles={['USER', 'TUTOR', 'ADMIN']} />} />
@@ -79,7 +86,11 @@ function App() {
           <Route path="/admin/posts" element={<ProtectedRoute element={<AdminPosts />} allowedRoles={['ADMIN']} />} />
           <Route path="/admin/subjects" element={<ProtectedRoute element={<AdminSubjects />} allowedRoles={['ADMIN']} />} />
           <Route path="/admin/interactions" element={<ProtectedRoute element={<AdminInteractions />} allowedRoles={['ADMIN']} />} />
-
+          
+          {/* ✅ UPDATED - Wallet Management (Transactions) */}
+          <Route path="/admin/transactions" element={<ProtectedRoute element={<AdminTransactions />} allowedRoles={['ADMIN']} />} />
+          <Route path="/admin/wallet" element={<ProtectedRoute element={<AdminTransactions />} allowedRoles={['ADMIN']} />} />
+          
           {/* Legacy routes - backward compatibility */}
           <Route path="/student/profile" element={<ProtectedRoute element={<StudentProfile />} allowedRoles={['USER']} />} />
           <Route path="/tutor/profile" element={<ProtectedRoute element={<TutorProfile />} allowedRoles={['TUTOR']} />} />
@@ -146,6 +157,24 @@ function App() {
           <Route 
             path="/my-reports" 
             element={<ProtectedRoute element={<MyReports />} allowedRoles={['USER', 'TUTOR']} />} 
+          />
+
+          {/* STUDENT - My Posts */}
+          <Route 
+            path="/posts/inventory" 
+            element={<ProtectedRoute element={<PostInventory />} allowedRoles={['USER']} />} 
+          />
+
+          {/* ✅ NEW - STUDENT - My Reviews */}
+          <Route 
+            path="/posts/my-reviews" 
+            element={<ProtectedRoute element={<MyReviews />} allowedRoles={['USER']} />} 
+          />
+
+          {/* ✅ NEW - TUTOR - My Received Reviews */}
+          <Route 
+            path="/reviews/received" 
+            element={<ProtectedRoute element={<MyReceivedReviews />} allowedRoles={['TUTOR']} />} 
           />
 
           {/* 404 */}
