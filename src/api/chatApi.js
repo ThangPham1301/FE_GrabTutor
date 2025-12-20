@@ -355,6 +355,12 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
       const token = localStorage.getItem('token');
       if (DEBUG) console.log('💬 [API] Fetching conversations...');
 
+      // ✅ NEW - Log request details
+      console.log('🔍 === GET /grabtutor/room/myRooms REQUEST ===');
+      console.log('URL:', `${BASE_URL}/grabtutor/room/myRooms?pageNo=${pageNo}&pageSize=${pageSize}`);
+      console.log('Headers:', { Authorization: `Bearer ${token?.substring(0, 50)}...` });
+      console.log('pageNo:', pageNo, 'pageSize:', pageSize);
+
       const response = await fetch(
         `${BASE_URL}/grabtutor/room/myRooms?pageNo=${pageNo}&pageSize=${pageSize}`,
         {
@@ -366,13 +372,33 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
       const data = await response.json();
+      
+      // ✅ NEW - Log full response
+      console.log('✅ === GET /grabtutor/room/myRooms RESPONSE ===');
+      console.log('Status:', response.status);
+      console.log('Full response data:', JSON.stringify(data, null, 2));
+      console.log('Data type:', typeof data);
+      console.log('Data keys:', data ? Object.keys(data) : 'null');
+      
+      // ✅ NEW - Log response structure
+      if (data?.data) {
+        console.log('data.data type:', typeof data.data);
+        console.log('data.data keys:', Object.keys(data.data || {}));
+        if (Array.isArray(data.data)) {
+          console.log('data.data is array, length:', data.data.length);
+          console.log('First item:', data.data[0]);
+        } else if (data.data?.rooms) {
+          console.log('data.data.rooms type:', typeof data.data.rooms);
+          console.log('data.data.rooms length:', data.data.rooms.length);
+          console.log('First room:', data.data.rooms[0]);
+        }
+      }
+      
       const rooms = data?.data?.rooms || data?.data || data;
-      if (DEBUG) console.log('✅ [API] Conversations:', rooms);
+      if (DEBUG) console.log('💬 [API] Conversations:', rooms);
       return rooms;
     } catch (error) {
       console.error('❌ [API] Error fetching conversations:', error);

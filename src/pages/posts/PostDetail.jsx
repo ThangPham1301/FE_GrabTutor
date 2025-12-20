@@ -585,8 +585,8 @@ export default function PostDetail() {
                     Complete tutoring to leave a review
                   </p>
                   
-                  {/* Show review button for students if post is solved */}
-                  {user && user.role === 'USER' && post?.status === 'SOLVED' && !review && (
+                  {/* Show review button for students if post is solved - DISABLED */}
+                  {false && user && user.role === 'USER' && post?.status === 'SOLVED' && !review && (
                     <button
                       onClick={() => setShowReviewForm(true)}
                       className="mt-4 px-4 py-2 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-colors font-bold text-sm"
@@ -636,8 +636,8 @@ export default function PostDetail() {
         />
       )}
 
-      {/* ==================== REVIEW FORM MODAL ==================== */}
-      {showReviewForm && (
+      {/* ==================== REVIEW FORM MODAL - DISABLED ==================== */}
+      {false && showReviewForm && (
         <ReviewFormModal
           isOpen={showReviewForm}
           postId={postId}

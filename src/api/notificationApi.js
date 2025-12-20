@@ -16,8 +16,7 @@ const notificationApi = {
           params: {
             userId: userId,
             pageNo: pageNo,
-            pageSize: pageSize,
-            sorts: ""  
+            pageSize: pageSize
           },
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

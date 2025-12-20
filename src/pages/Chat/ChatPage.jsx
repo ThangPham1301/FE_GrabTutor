@@ -12,17 +12,29 @@ const DEBUG = true;
 
 export default function ChatPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  // State
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
 
+  // ==================== EFFECTS ====================
   useEffect(() => {
-    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -64,6 +76,19 @@ export default function ChatPage() {
     };
   }, [user, navigate]);
 
+  // ==================== HANDLERS ====================
+  const handleSelectConversation = (conversation) => {
+    setSelectedConversation(conversation);
+  };
+
+  const handleNewChat = () => {
+    alert('Start a new chat feature - Coming soon!');
+  };
+
+  const handleCloseChat = () => {
+    setSelectedConversation(null);
+  };
+
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
@@ -104,39 +129,42 @@ export default function ChatPage() {
         </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {(!selectedConversation || !isMobileView) && (
-          <div className={isMobileView && selectedConversation ? 'hidden' : 'w-full md:w-80'}>
+      {/* ==================== MAIN CHAT CONTAINER ==================== */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Sidebar - Hidden on mobile when chat is open */}
+        {(!isMobileView || !selectedConversation) && (
+          <div className="w-full md:w-96 border-r border-gray-200 overflow-hidden flex flex-col">
             <ChatSidebar
               key={refreshKey}
               selectedConversation={selectedConversation}
-              onSelectConversation={setSelectedConversation}
-              onNewChat={() => setSelectedConversation(null)}
+              onSelectConversation={handleSelectConversation}
+              onNewChat={handleNewChat}
             />
           </div>
         )}
 
-        {selectedConversation ? (
-          <div className="flex-1">
+        {/* Chat Window - Hidden on mobile when no chat selected */}
+        {(!isMobileView || selectedConversation) && selectedConversation ? (
+          <div className="flex-1 flex flex-col overflow-hidden">
             <ChatWindow
+              key={selectedConversation.id}
               conversation={selectedConversation}
-              onClose={() => setSelectedConversation(null)}
+              onClose={handleCloseChat}
               onRefresh={handleRefresh}
             />
           </div>
-        ) : (
-          !isMobileView && (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-              <div className="text-center">
-                <div className="w-24 h-24 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <span className="text-5xl">Chat</span>
-                </div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Chưa chọn cuộc trò chuyện</h2>
-                <p className="text-gray-600 text-lg">Chọn cuộc trò chuyện hoặc chờ thông báo mới</p>
+        ) : !isMobileView && !selectedConversation ? (
+          <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <span className="text-5xl">💬</span>
               </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Select a Conversation</h2>
+              <p className="text-gray-600 text-lg">Choose a chat to get started</p>
             </div>
-          )
-        )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

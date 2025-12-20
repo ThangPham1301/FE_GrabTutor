@@ -1,7 +1,10 @@
 // src/pages/ChatSidebar.jsx
 import React, { useState, useEffect } from 'react';
-import { FaComments, FaPlus, FaSearch, FaTimes, FaSpinner } from 'react-icons/fa';
+import { FaComments, FaPlus, FaSearch, FaTimes, FaSpinner, FaTrash, FaClock, FaCheckCircle } from 'react-icons/fa';
 import chatApi from '../../api/chatApi';
+import postApi from '../../api/postApi';
+
+const DEBUG = true;
 
 export default function ChatSidebar({ selectedConversation, onSelectConversation, onNewChat }) {
   const [conversations, setConversations] = useState([]);
@@ -9,21 +12,15 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredConversations, setFilteredConversations] = useState([]);
   const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [postTitles, setPostTitles] = useState({});
+  const [deletingId, setDeletingId] = useState(null);
+  const [hoveredId, setHoveredId] = useState(null);
 
+  // ✅ BỎ: Polling interval - chỉ fetch 1 lần khi mount
+  // WebSocket sẽ update thay đổi real-time
   useEffect(() => {
     fetchConversations();
-    const interval = setInterval(fetchConversations, 10000);
-    return () => clearInterval(interval);
   }, []);
-
-  // ✅ REMOVE THIS - onUpdate không cần
-  // useEffect(() => {
-  //   const handleUpdate = () => {
-  //     fetchConversations();
-  //   };
-  //   chatApi.onUpdate(handleUpdate);
-  //   return () => {};
-  // }, []);
 
   useEffect(() => {
     filterConversations();
@@ -32,128 +29,316 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
   const fetchConversations = async () => {
     const now = Date.now();
     if (now - lastFetchTime < 2000) return;
-
+    
     try {
       setLoading(true);
-      console.log('🏠 [Sidebar] Fetching conversations...');
+      const response = await chatApi.getConversations(0, 50);
       
-      const rooms = await chatApi.getConversations();
+      if (DEBUG) console.log('📥 ChatSidebar conversations:', response);
       
-      console.log('✅ [Sidebar] Conversations loaded:', rooms?.length);
-      setConversations(Array.isArray(rooms) ? rooms : []);
+      let items = [];
+      if (Array.isArray(response)) {
+        items = response;
+      } else if (response?.items) {
+        items = response.items;
+      } else if (response?.data) {
+        items = Array.isArray(response.data) ? response.data : [];
+      }
+
+      setConversations(items);
       setLastFetchTime(now);
+      
+      await fetchPostTitles(items);
     } catch (error) {
-      console.error('❌ [Sidebar] Error fetching conversations:', error);
-      setConversations([]);
+      console.error('❌ Error fetching conversations:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterConversations = () => {
-    if (!searchTerm.trim()) {
-      setFilteredConversations(conversations);
-      return;
+  const fetchPostTitles = async (convs) => {
+    const titles = {};
+    
+    for (const conv of convs) {
+      if (conv.postId && !titles[conv.postId]) {
+        try {
+          const postResponse = await postApi.getPostById(conv.postId);
+          const post = postResponse.data?.data || postResponse.data;
+          titles[conv.postId] = post?.title || 'Unknown Post';
+          
+          if (DEBUG) console.log(`📝 Post ${conv.postId}: ${titles[conv.postId]}`);
+        } catch (err) {
+          console.error(`Error fetching post ${conv.postId}:`, err);
+          titles[conv.postId] = 'Unknown Post';
+        }
+      }
     }
-    const filtered = conversations.filter(conv =>
-      (conv.participantName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (conv.postTitle || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    
+    setPostTitles(titles);
+  };
+
+  const filterConversations = () => {
+    const filtered = conversations.filter(conv => {
+      const roomName = getRoomName(conv);
+      return roomName.toLowerCase().includes(searchTerm.toLowerCase());
+    });
     setFilteredConversations(filtered);
   };
 
-  const handleDeleteConversation = async (conversationId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện này không?')) {
+  const getRoomName = (conv) => {
+    if (postTitles[conv.postId]) {
+      return postTitles[conv.postId];
+    }
+    if (conv.postTitle) {
+      return conv.postTitle;
+    }
+    if (conv.participantName) {
+      return conv.participantName;
+    }
+    return conv.postId ? `Post: ${conv.postId.slice(0, 8)}...` : 'Unknown';
+  };
+
+  const handleDeleteConversation = async (conversationId, e) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this conversation?')) {
       try {
+        setDeletingId(conversationId);
         await chatApi.deleteConversation(conversationId);
         setConversations(prev => prev.filter(c => c.id !== conversationId));
-        setLastFetchTime(Date.now());
+        setLastFetchTime(0);
       } catch (error) {
-        alert('Không thể xóa cuộc trò chuyện');
+        alert('Failed to delete conversation');
+      } finally {
+        setDeletingId(null);
       }
     }
   };
 
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'IN_PROGRESS': { icon: FaClock, color: 'bg-blue-100 text-blue-700', label: 'Active', bgColor: 'bg-blue-50' },
+      'SUBMITTED': { icon: FaClock, color: 'bg-amber-100 text-amber-700', label: 'Waiting', bgColor: 'bg-amber-50' },
+      'CONFIRMED': { icon: FaCheckCircle, color: 'bg-green-100 text-green-700', label: 'Confirmed', bgColor: 'bg-green-50' },
+      'RESOLVED_NORMAL': { icon: FaCheckCircle, color: 'bg-emerald-100 text-emerald-700', label: 'Completed', bgColor: 'bg-emerald-50' },
+    };
+    
+    const config = statusConfig[status] || statusConfig['IN_PROGRESS'];
+    const Icon = config.icon;
+    
+    return (
+      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${config.color}`}>
+        <Icon size={12} />
+        {config.label}
+      </div>
+    );
+  };
+
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   return (
-    <div className="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="p-4 border-b border-gray-200">
+    <div className="w-full h-full bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col shadow-sm">
+      
+      {/* ==================== HEADER ==================== */}
+      <div className="bg-gradient-to-r from-[#03ccba] via-teal-500 to-[#02b5a5] text-white p-4 md:p-6 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
-            <FaComments className="text-[#03ccba]" /> Tin nhắn
-          </h2>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <FaComments size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold">Messages</h2>
+              <p className="text-teal-100 text-xs font-medium">
+                {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
           <button
             onClick={onNewChat}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-[#03ccba]"
-            title="Cuộc trò chuyện mới"
+            className="p-2 md:p-3 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-all duration-300 transform hover:scale-110 backdrop-blur-sm flex-shrink-0"
+            title="Start new conversation"
           >
-            <FaPlus />
+            <FaPlus size={16} />
           </button>
         </div>
 
-        <div className="relative">
-          <FaSearch className="absolute left-3 top-3 text-gray-400 text-sm" />
+        {/* ==================== SEARCH BOX ==================== */}
+        <div className="relative group">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white text-opacity-60 text-sm" />
           <input
             type="text"
+            placeholder="Search conversations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm kiếm..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:border-[#03ccba]"
+            className="w-full pl-10 pr-4 py-2.5 bg-white bg-opacity-90 text-gray-900 placeholder-gray-500 rounded-lg focus:bg-opacity-100 focus:ring-2 focus:ring-white focus:ring-opacity-40 outline-none transition-all duration-200 shadow-sm font-medium text-sm"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <FaTimes size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* ==================== CONVERSATIONS LIST ==================== */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         {loading ? (
           <div className="p-8 text-center">
-            <FaSpinner className="animate-spin text-2xl text-[#03ccba] mx-auto mb-2" />
-            <p className="text-sm text-gray-500">Đang tải...</p>
+            <FaSpinner className="animate-spin text-3xl text-[#03ccba] mx-auto mb-3" />
+            <p className="text-gray-600 font-semibold text-sm">Loading conversations...</p>
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <p className="text-sm">Chưa có cuộc trò chuyện</p>
-            <p className="text-xs mt-2">Nhận một đặt cọc để bắt đầu trò chuyện</p>
+          <div className="p-8 text-center">
+            <div className="text-5xl mb-3">💬</div>
+            <h3 className="text-gray-900 font-bold text-base mb-1">
+              {searchTerm ? 'No conversations found' : 'No messages yet'}
+            </h3>
+            <p className="text-gray-600 text-xs">
+              {searchTerm 
+                ? 'Try a different search term'
+                : 'Your conversations will appear here'
+              }
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredConversations.map(conv => (
-              <div key={conv.id} className="relative">
-                <button
+          <div className="p-3 space-y-2">
+            {filteredConversations.map(conv => {
+              const roomName = getRoomName(conv);
+              const isSelected = selectedConversation?.id === conv.id;
+              
+              return (
+                <div
+                  key={conv.id}
+                  onMouseEnter={() => setHoveredId(conv.id)}
+                  onMouseLeave={() => setHoveredId(null)}
                   onClick={() => onSelectConversation(conv)}
-                  className={`w-full p-4 text-left transition-colors hover:bg-gray-50 flex items-start justify-between gap-3 ${
-                    selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-4 border-[#03ccba]' : ''
-                  }`}
+                  className={`group relative rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden
+                    ${isSelected 
+                      ? 'bg-white shadow-lg ring-2 ring-[#03ccba] ring-opacity-50' 
+                      : 'bg-white hover:shadow-md hover:bg-gradient-to-r hover:from-white hover:to-teal-50'
+                    }
+                  `}
                 >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#03ccba] to-[#02b5a5] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {(conv.participantName || 'U').charAt(0).toUpperCase()}
-                  </div>
+                  <div className="p-3 md:p-4">
+                    {/* Conversation Item */}
+                    <div className="flex gap-3">
+                      {/* Avatar */}
+                      <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center text-white font-bold text-sm md:text-lg flex-shrink-0 shadow-md
+                        ${isSelected 
+                          ? 'bg-gradient-to-br from-[#03ccba] to-[#02b5a5]' 
+                          : 'bg-gradient-to-br from-blue-400 to-cyan-400'
+                        } group-hover:shadow-lg transition-shadow
+                      `}>
+                        {(roomName || 'U').charAt(0).toUpperCase()}
+                      </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start gap-2">
-                      <p className="font-semibold text-gray-900 text-sm truncate">
-                        {conv.participantName || 'Không xác định'}
-                      </p>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Title & ID */}
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className={`text-sm md:text-base font-bold truncate line-clamp-1 md:line-clamp-2 ${isSelected ? 'text-[#03ccba]' : 'text-gray-900'}`}>
+                            {roomName}
+                          </h3>
+                          {conv.postId && (
+                            <span className="text-xs text-gray-400 whitespace-nowrap ml-1 font-mono flex-shrink-0">
+                              {conv.postId.slice(0, 6)}...
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="mb-2">
+                          {getStatusBadge(conv.status)}
+                        </div>
+
+                        {/* Participant & Time */}
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          {conv.participantName && (
+                            <span className="text-gray-600 truncate">
+                              with <strong>{conv.participantName}</strong>
+                            </span>
+                          )}
+                          <p className="text-gray-500 whitespace-nowrap flex-shrink-0">
+                            {getTimeAgo(conv.updatedAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        <button
+                          onClick={(e) => handleDeleteConversation(conv.id, e)}
+                          disabled={deletingId === conv.id}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            hoveredId === conv.id || isSelected
+                              ? 'opacity-100 text-red-600 hover:bg-red-50'
+                              : 'opacity-0 text-gray-400'
+                          } disabled:opacity-50`}
+                          title="Delete conversation"
+                        >
+                          {deletingId === conv.id ? (
+                            <FaSpinner className="animate-spin" size={12} />
+                          ) : (
+                            <FaTrash size={12} />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 truncate">
-                      {conv.postTitle || 'N/A'}
-                    </p>
-                  </div>
-                </button>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteConversation(conv.id);
-                  }}
-                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0 z-10"
-                  title="Xóa"
-                >
-                  <FaTimes size={14} />
-                </button>
-              </div>
-            ))}
+                    {/* Selected Indicator */}
+                    {isSelected && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <span className="text-xs font-bold text-[#03ccba] flex items-center gap-1.5">
+                          <FaCheckCircle size={12} />
+                          SELECTED
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hover Border */}
+                  {!isSelected && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* ==================== FOOTER STATS ==================== */}
+      {conversations.length > 0 && filteredConversations.length > 0 && (
+        <div className="border-t border-gray-200 bg-white p-3 md:p-4 shadow-sm flex-shrink-0">
+          <div className="flex items-center justify-between text-xs text-gray-600 flex-wrap gap-2">
+            <span className="font-semibold">
+              {filteredConversations.length}/{conversations.length}
+            </span>
+            <div className="flex gap-2 flex-wrap">
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                {conversations.filter(c => c.status === 'IN_PROGRESS').length} Active
+              </span>
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                {conversations.filter(c => c.status === 'CONFIRMED').length} Done
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -147,7 +147,10 @@ export default function NotificationBell() {
       setUnreadCount(unread);
       
     } catch (error) {
-      console.error('❌ Error fetching notifications:', error);
+      // ⚠️ Backend API has serialization bug - silently fail and use WebSocket only
+      if (DEBUG) console.warn('⚠️ REST API unavailable (Backend bug):', error?.response?.data?.message || error?.message);
+      if (DEBUG) console.log('📡 Using WebSocket-only mode for notifications');
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
