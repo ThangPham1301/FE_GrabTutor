@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
         
         const userData = {
           email: decoded.sub,
-          role: role, // Giờ sẽ là "ADMIN", "TUTOR", "USER" chứ không phải "ROLE_ADMIN"
+          role: role, 
           userId: decoded.userId,
           fullName: decoded.fullName || decoded.sub,
           phoneNumber: decoded.phoneNumber || '',

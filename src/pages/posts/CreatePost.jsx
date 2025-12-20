@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  FaPlus, FaSearch, FaFilter, FaChevronLeft, FaChevronRight,
-  FaSpinner, FaTimes, FaBook, FaCalendar, FaMapPin, FaDollarSign,
-  FaUser, FaStar, FaClock, FaArrowRight
+  FaPlus, FaSearch, FaSpinner, FaBook, FaCalendar, FaMapPin, FaDollarSign,
+  FaUser, FaStar, FaClock, FaArrowRight, FaClock as FaClockAlert, FaExclamationCircle
 } from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import PostFormModal from '../../components/PostFormModal';
@@ -14,7 +13,7 @@ const DEBUG = true;
 
 // ==================== POST CARD COMPONENT ====================
 function PostCard({ post, subjects, onClick }) {
-  // ✅ Helper functions - Add all status types
+  // ✅ Helper functions - All status types
   const getStatusColor = (status) => {
     const colors = {
       'OPEN': 'bg-green-100 text-green-700 border-green-300',
@@ -48,14 +47,14 @@ function PostCard({ post, subjects, onClick }) {
     return labels[status] || status || 'Unknown';
   };
 
-  // ✅ Lấy subject name từ subjectId
+  // ✅ Get subject name from subjectId
   const getSubjectName = (subjectId) => {
     if (!subjectId) return 'Subject';
     const subject = subjects.find(s => s.id === subjectId || String(s.id) === String(subjectId));
     return subject?.name || 'Unknown Subject';
   };
 
-  // ✅ Format thời gian tương đối
+  // ✅ Format relative time
   const formatDate = (date) => {
     if (!date) return 'N/A';
     const now = new Date();
@@ -104,19 +103,19 @@ function PostCard({ post, subjects, onClick }) {
         </div>
       </div>
 
-      {/* ✅ Content - flex-1 để đẩy footer xuống */}
+      {/* ✅ Content - flex-1 to push footer down */}
       <div className="p-5 flex flex-col flex-1">
         {/* ✅ Title */}
         <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#03ccba] transition-colors">
           {post.title}
         </h3>
 
-        {/* ✅ Description - 2 dòng */}
+        {/* ✅ Description - 2 lines */}
         <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed flex-1">
           {post.description || 'No description provided'}
         </p>
 
-        {/* ✅ Simplified Meta - Chỉ hiển thị Subject + Date */}
+        {/* ✅ Simplified Meta - Subject + Date */}
         <div className="flex items-center justify-between mb-4 pb-4 border-t border-gray-100 pt-4">
           {/* Subject Name */}
           <div className="flex items-center gap-2">
@@ -149,8 +148,20 @@ function PostCard({ post, subjects, onClick }) {
         </div>
       </div>
 
+      {/* ✅ Open Post Timer Alert */}
+      {(post.status === 'OPEN' || !post.status) && (
+        <div className="px-5 pb-3">
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-2 rounded flex items-start gap-2">
+            <FaClockAlert className="text-amber-600 text-sm flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 font-semibold">
+              ⏱️ Post expires in 30 min if no tutor accepts
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ✅ Action Button - sticky at bottom */}
-      <div className="px-5 pb-5 mt-auto">
+      <div className="px-5 pb-5">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -264,7 +275,7 @@ export default function CreatePost() {
       });
     }
 
-    // Sort: mới nhất trước
+    // Sort: newest first
     filtered = filtered.sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
     );
@@ -273,12 +284,6 @@ export default function CreatePost() {
   };
 
   // ==================== HANDLERS ====================
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setFilterSubject('');
-    setPageNo(0);
-  };
-
   const handleViewDetail = (postId) => {
     navigate(`/posts/${postId}`);
   };
@@ -310,7 +315,7 @@ export default function CreatePost() {
               <div>
                 <h1 className="text-5xl md:text-6xl font-bold">Browse Questions</h1>
                 <p className="text-lg text-teal-100 mt-2">
-                  Find questions from students and help them out
+                  Find questions from students and help them achieve their goals
                 </p>
               </div>
             </div>
@@ -318,37 +323,49 @@ export default function CreatePost() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* ==================== SEARCH & FILTER SECTION ==================== */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+        {/* Search and Filters Card */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end">
             {/* Search Input */}
-            <div className="md:col-span-8">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-bold text-gray-900 mb-3">
                 🔍 Search Questions
               </label>
-              <div className="relative">
-                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <div className="relative group">
+                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#03ccba] group-focus-within:scale-110 transition-transform" size={18} />
                 <input
                   type="text"
                   placeholder="Search by title or description..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all"
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPageNo(0);
+                  }}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all font-medium"
                 />
               </div>
             </div>
 
             {/* Subject Filter */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                📖 Subject
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-bold text-gray-900 mb-3">
+                📚 Filter by Subject
               </label>
               <select
                 value={filterSubject}
-                onChange={(e) => setFilterSubject(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white"
+                onChange={(e) => {
+                  setFilterSubject(e.target.value);
+                  setPageNo(0);
+                }}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all bg-white font-medium text-gray-900 appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2303ccba' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 1rem center',
+                  paddingRight: '2.5rem'
+                }}
               >
                 <option value="">All Subjects</option>
                 {subjects.map(subject => (
@@ -358,79 +375,82 @@ export default function CreatePost() {
                 ))}
               </select>
             </div>
-
-            {/* Clear Button */}
-            {hasFilters && (
-              <div className="md:col-span-2 flex">
-                <button
-                  onClick={handleClearFilters}
-                  className="flex-1 px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold flex items-center justify-center gap-2 h-full"
-                >
-                  <FaTimes size={16} />
-                  Clear
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Results Info */}
           {hasFilters && (
-            <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
-              <p className="text-blue-800 text-sm font-semibold">
+            <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg flex items-center gap-3">
+              <FaExclamationCircle className="text-blue-600 text-lg flex-shrink-0" />
+              <p className="text-blue-800 font-semibold">
                 ✅ Showing {displayPosts.length} of {posts.length} question{posts.length !== 1 ? 's' : ''}
               </p>
             </div>
           )}
         </div>
 
-        {/* Posts Grid */}
+        {/* ==================== POSTS GRID ==================== */}
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">Loading questions...</p>
+          <div className="flex flex-col items-center justify-center py-24">
+            <FaSpinner className="animate-spin text-[#03ccba] text-5xl mb-4" />
+            <p className="text-gray-600 text-lg font-semibold">Loading questions...</p>
           </div>
         ) : displayPosts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                subjects={subjects}
-                onClick={() => handleViewDetail(post.id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {displayPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  subjects={subjects}
+                  onClick={() => handleViewDetail(post.id)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 py-12">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={pageNo === 0}
+                  className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#03ccba] hover:text-[#03ccba] transition-all font-bold"
+                >
+                  ← Previous
+                </button>
+                <span className="px-6 py-3 font-bold text-gray-700 bg-white rounded-lg border-2 border-[#03ccba]">
+                  Page {pageNo + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={pageNo >= totalPages - 1}
+                  className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all font-bold"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="text-center bg-white rounded-lg p-16 border-2 border-dashed border-gray-300">
+          <div className="text-center bg-white rounded-2xl p-16 border-2 border-dashed border-gray-300 shadow-sm">
             <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-gray-900 mb-2">No Questions Found</h3>
             <p className="text-gray-600 mb-6">
               {hasFilters
                 ? 'Try adjusting your search filters'
-                : 'No questions available right now'}
+                : 'No questions available right now. Check back later!'}
             </p>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-12">
-            <button
-              onClick={handlePrevPage}
-              disabled={pageNo === 0}
-              className="px-6 py-3 bg-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition-colors font-bold"
-            >
-              ← Previous
-            </button>
-            <span className="px-6 py-3 font-bold text-gray-700">
-              Page {pageNo + 1} / {totalPages}
-            </span>
-            <button
-              onClick={handleNextPage}
-              disabled={pageNo >= totalPages - 1}
-              className="px-6 py-3 bg-[#03ccba] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#02b5a5] transition-colors font-bold"
-            >
-              Next →
-            </button>
+            {hasFilters && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterSubject('');
+                  setPageNo(0);
+                }}
+                className="px-6 py-3 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-colors font-bold"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -46,6 +46,7 @@ import MyReviews from './pages/posts/MyReviews';
 import MyReceivedReviews from './pages/posts/MyReceivedReviews';
 import PaymentSuccess from "./pages/wallet/PaymentSuccess";
 import AdminTransactions from './pages/admin/AdminTransactions';
+import MyReceivedBids from './pages/posts/MyReceivedBids';
 
 function App() {
   return (
@@ -175,6 +176,12 @@ function App() {
           <Route 
             path="/reviews/received" 
             element={<ProtectedRoute element={<MyReceivedReviews />} allowedRoles={['TUTOR']} />} 
+          />
+
+          {/* ✅ NEW - My Received Bids */}
+          <Route 
+            path="/posts/my-received-bids" 
+            element={<ProtectedRoute element={<MyReceivedBids />} allowedRoles={['USER']} />} 
           />
 
           {/* 404 */}

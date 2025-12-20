@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaSpinner, FaWallet, FaChartLine, FaArrowDown, FaArrowUp } from 'react-icons/fa';
+import {
+  FaArrowLeft,
+  FaSpinner,
+  FaWallet,
+  FaChartLine,
+  FaArrowDown,
+  FaArrowUp,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
+  FaMoneyBillWave,
+} from 'react-icons/fa';
 import {
   LineChart,
   Line,
@@ -12,7 +23,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ComposedChart
+  ComposedChart,
 } from 'recharts';
 import Navbar from '../../components/Navbar';
 import transactionApi from '../../api/transactionApi';
@@ -22,10 +33,10 @@ const DEBUG = true;
 
 export default function AdminTransactions() {
   const navigate = useNavigate();
-  
+
   // ==================== STATES ====================
-  const [activeTab, setActiveTab] = useState('recharge'); // recharge, virtual
-  
+  const [activeTab, setActiveTab] = useState('recharge');
+
   // Recharge transactions
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +69,8 @@ export default function AdminTransactions() {
   }, [activeTab, pageNo, pageNoVirtual]);
 
   // ==================== API CALLS ====================
-  // ✅ Fetch Recharge Transactions (Legacy)
+
+  // ✅ Fetch Recharge Transactions
   const fetchAllTransactions = async () => {
     try {
       setLoading(true);
@@ -93,7 +105,7 @@ export default function AdminTransactions() {
     }
   };
 
-  // ✅ NEW - Fetch Virtual Transactions (Withdrawals)
+  // ✅ Fetch Virtual Transactions (Withdrawals)
   const fetchAllVirtualTransactions = async () => {
     try {
       setLoadingVirtual(true);
@@ -146,7 +158,7 @@ export default function AdminTransactions() {
       setRevenueData({
         monthly: chartData,
         totalRevenue,
-        totalProfit
+        totalProfit,
       });
     } catch (err) {
       console.error('❌ Error fetching revenue data:', err);
@@ -156,6 +168,7 @@ export default function AdminTransactions() {
   };
 
   // ==================== PAGINATION ====================
+
   const handlePrevPage = () => {
     if (activeTab === 'recharge' && pageNo > 0) {
       setPageNo(pageNo - 1);
@@ -178,20 +191,16 @@ export default function AdminTransactions() {
   };
 
   // ==================== HELPERS ====================
-  const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
 
-  const CustomTooltip = ({ active, payload, label }) => {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
-          <p className="font-semibold text-gray-900">
-            {monthNames[label - 1]}
-          </p>
+        <div className="bg-white p-4 border-2 border-gray-300 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-900 mb-2">{payload[0].payload.monthName}</p>
           {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }}>
+            <p key={index} style={{ color: entry.color }} className="text-sm font-bold">
               {entry.name}: {(entry.value / 1000000).toFixed(2)}M VNĐ
             </p>
           ))}
@@ -209,7 +218,7 @@ export default function AdminTransactions() {
       'WITHDRAWAL': 'bg-orange-100 text-orange-800',
       'PAYMENT': 'bg-indigo-100 text-indigo-800',
       'ADD_FUND': 'bg-cyan-100 text-cyan-800',
-      'DEFAULT': 'bg-gray-100 text-gray-800'
+      'DEFAULT': 'bg-gray-100 text-gray-800',
     };
     return colors[type] || colors['DEFAULT'];
   };
@@ -218,7 +227,7 @@ export default function AdminTransactions() {
     const colors = {
       'WITHDRAW': 'bg-orange-100 text-orange-800',
       'ADD_FUND': 'bg-blue-100 text-blue-800',
-      'DEFAULT': 'bg-gray-100 text-gray-800'
+      'DEFAULT': 'bg-gray-100 text-gray-800',
     };
     return colors[type] || colors['DEFAULT'];
   };
@@ -228,7 +237,7 @@ export default function AdminTransactions() {
       'SUCCESS': 'bg-green-100 text-green-800',
       'FAILED': 'bg-red-100 text-red-800',
       'PENDING': 'bg-yellow-100 text-yellow-800',
-      'DEFAULT': 'bg-gray-100 text-gray-800'
+      'DEFAULT': 'bg-gray-100 text-gray-800',
     };
     return colors[status] || colors['DEFAULT'];
   };
@@ -239,89 +248,92 @@ export default function AdminTransactions() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+      month: 'short',
+      day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
   const chartData = revenueData?.monthly?.map((item) => ({
     ...item,
-    monthName: monthNames[item.month - 1]
+    monthName: monthNames[item.month - 1],
   })) || [];
+
+  // ==================== RENDER ====================
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Header */}
+      {/* ==================== HEADER ==================== */}
       <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-12 px-4 shadow-lg">
         <div className="max-w-7xl mx-auto">
           <button
             onClick={() => navigate('/admin/dashboard')}
             className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
           >
-            <FaArrowLeft size={20} /> Quay lại Dashboard
+            <FaArrowLeft size={20} /> Back to Dashboard
           </button>
           <div className="flex items-center gap-4 mb-2">
             <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-              <FaWallet size={24} />
+              <FaWallet size={28} />
             </div>
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold">💰 Quản lý Ví & Giao dịch</h1>
-              <p className="text-teal-100 text-lg mt-1">Xem và quản lý tất cả giao dịch nạp tiền và rút tiền của người dùng</p>
+              <h1 className="text-4xl md:text-5xl font-bold">💰 Wallet & Transactions</h1>
+              <p className="text-teal-100 text-lg mt-1">
+                Manage all user recharges and withdrawal requests
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* ==================== CONTENT ==================== */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        
-        {/* Tab Navigation */}
-        <div className="flex gap-4 mb-8 border-b border-gray-300 flex-wrap">
+        {/* ==================== TAB NAVIGATION ==================== */}
+        <div className="flex gap-4 mb-8 border-b-2 border-gray-200 flex-wrap">
           <button
             onClick={() => {
               setActiveTab('recharge');
               setPageNo(0);
             }}
-            className={`pb-4 px-6 font-bold text-lg transition-colors border-b-2 ${
+            className={`pb-4 px-6 font-bold text-lg transition-colors border-b-4 -mb-2 ${
               activeTab === 'recharge'
                 ? 'text-[#03ccba] border-[#03ccba]'
                 : 'text-gray-600 border-transparent hover:text-gray-900'
             }`}
           >
             <FaArrowUp className="inline mr-2" />
-            Nạp tiền (Recharge)
+            Recharge Transactions
           </button>
           <button
             onClick={() => {
               setActiveTab('virtual');
               setPageNoVirtual(0);
             }}
-            className={`pb-4 px-6 font-bold text-lg transition-colors border-b-2 ${
+            className={`pb-4 px-6 font-bold text-lg transition-colors border-b-4 -mb-2 ${
               activeTab === 'virtual'
                 ? 'text-[#03ccba] border-[#03ccba]'
                 : 'text-gray-600 border-transparent hover:text-gray-900'
             }`}
           >
             <FaArrowDown className="inline mr-2" />
-            Rút tiền (Withdrawals)
+            Withdrawals
           </button>
         </div>
 
         {/* ==================== RECHARGE TAB ==================== */}
         {activeTab === 'recharge' && (
           <div className="space-y-8">
-            {/* Revenue Chart */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* ========== Revenue Chart Card ========== */}
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
                   <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <FaChartLine /> Doanh thu & Lợi nhuận
+                    <FaChartLine /> Revenue & Profit Analysis
                   </h2>
                   <select
                     value={chartYear}
@@ -341,23 +353,26 @@ export default function AdminTransactions() {
 
                 {/* Stats */}
                 {revenueData && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="bg-white bg-opacity-15 rounded p-4">
-                      <p className="text-teal-100 text-sm font-semibold">Tổng doanh thu</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white bg-opacity-15 rounded-lg p-4 backdrop-blur">
+                      <p className="text-teal-100 text-sm font-semibold">Total Revenue</p>
+                      <p className="text-3xl font-bold text-white mt-2">
                         {(revenueData.totalRevenue / 1000000).toFixed(2)}M VNĐ
                       </p>
                     </div>
-                    <div className="bg-white bg-opacity-15 rounded p-4">
-                      <p className="text-teal-100 text-sm font-semibold">Tổng lợi nhuận</p>
-                      <p className="text-2xl font-bold text-green-300 mt-1">
+                    <div className="bg-white bg-opacity-15 rounded-lg p-4 backdrop-blur">
+                      <p className="text-teal-100 text-sm font-semibold">Total Profit</p>
+                      <p className="text-3xl font-bold text-green-300 mt-2">
                         {(revenueData.totalProfit / 1000000).toFixed(2)}M VNĐ
                       </p>
                     </div>
-                    <div className="bg-white bg-opacity-15 rounded p-4">
-                      <p className="text-teal-100 text-sm font-semibold">Tỷ suất lợi nhuận</p>
-                      <p className="text-2xl font-bold text-yellow-300 mt-1">
-                        {revenueData.totalRevenue > 0 ? ((revenueData.totalProfit / revenueData.totalRevenue) * 100).toFixed(1) : 0}%
+                    <div className="bg-white bg-opacity-15 rounded-lg p-4 backdrop-blur">
+                      <p className="text-teal-100 text-sm font-semibold">Profit Margin</p>
+                      <p className="text-3xl font-bold text-yellow-300 mt-2">
+                        {revenueData.totalRevenue > 0
+                          ? ((revenueData.totalProfit / revenueData.totalRevenue) * 100).toFixed(1)
+                          : 0}
+                        %
                       </p>
                     </div>
                   </div>
@@ -365,7 +380,7 @@ export default function AdminTransactions() {
               </div>
 
               {/* Chart Type Buttons */}
-              <div className="px-6 py-4 border-b border-gray-200 flex gap-2">
+              <div className="px-6 py-4 border-b border-gray-200 flex gap-2 flex-wrap">
                 <button
                   onClick={() => setChartType('composed')}
                   className={`px-4 py-2 rounded font-semibold transition-all ${
@@ -374,7 +389,7 @@ export default function AdminTransactions() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  📈 Kết hợp
+                  📈 Composed
                 </button>
                 <button
                   onClick={() => setChartType('bar')}
@@ -384,7 +399,7 @@ export default function AdminTransactions() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  📊 Cột
+                  📊 Bar
                 </button>
                 <button
                   onClick={() => setChartType('line')}
@@ -394,7 +409,7 @@ export default function AdminTransactions() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  📉 Đường
+                  📉 Line
                 </button>
               </div>
 
@@ -407,63 +422,37 @@ export default function AdminTransactions() {
                 ) : chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={400}>
                     {chartType === 'composed' ? (
-                      <ComposedChart
-                        data={chartData}
-                        margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                      >
+                      <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="monthName"
-                          label={{ value: 'Tháng', position: 'insideBottom', offset: -5 }}
-                        />
-                        <YAxis
-                          label={{ value: 'VNĐ', angle: -90, position: 'insideLeft' }}
-                          tickFormatter={formatCurrency}
-                        />
+                        <XAxis dataKey="monthName" />
+                        <YAxis tickFormatter={formatCurrency} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                        <Bar dataKey="revenue" fill="#03ccba" name="💰 Doanh thu" />
+                        <Bar dataKey="revenue" fill="#03ccba" name="💰 Revenue" radius={[8, 8, 0, 0]} />
                         <Line
                           type="monotone"
                           dataKey="profit"
                           stroke="#fbbf24"
                           strokeWidth={3}
-                          name="📈 Lợi nhuận"
+                          name="📈 Profit"
+                          dot={{ fill: '#fbbf24', r: 5 }}
                         />
                       </ComposedChart>
                     ) : chartType === 'bar' ? (
-                      <BarChart
-                        data={chartData}
-                        margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                      >
+                      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="monthName"
-                          label={{ value: 'Tháng', position: 'insideBottom', offset: -5 }}
-                        />
-                        <YAxis
-                          label={{ value: 'VNĐ', angle: -90, position: 'insideLeft' }}
-                          tickFormatter={formatCurrency}
-                        />
+                        <XAxis dataKey="monthName" />
+                        <YAxis tickFormatter={formatCurrency} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                        <Bar dataKey="revenue" fill="#03ccba" name="💰 Doanh thu" />
-                        <Bar dataKey="profit" fill="#fbbf24" name="📈 Lợi nhuận" />
+                        <Bar dataKey="revenue" fill="#03ccba" name="💰 Revenue" radius={[8, 8, 0, 0]} />
+                        <Bar dataKey="profit" fill="#fbbf24" name="📈 Profit" radius={[8, 8, 0, 0]} />
                       </BarChart>
                     ) : (
-                      <LineChart
-                        data={chartData}
-                        margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                      >
+                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="monthName"
-                          label={{ value: 'Tháng', position: 'insideBottom', offset: -5 }}
-                        />
-                        <YAxis
-                          label={{ value: 'VNĐ', angle: -90, position: 'insideLeft' }}
-                          tickFormatter={formatCurrency}
-                        />
+                        <XAxis dataKey="monthName" />
+                        <YAxis tickFormatter={formatCurrency} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
                         <Line
@@ -471,35 +460,40 @@ export default function AdminTransactions() {
                           dataKey="revenue"
                           stroke="#03ccba"
                           strokeWidth={2}
-                          name="💰 Doanh thu"
+                          name="💰 Revenue"
+                          dot={{ fill: '#03ccba', r: 5 }}
                         />
                         <Line
                           type="monotone"
                           dataKey="profit"
                           stroke="#fbbf24"
                           strokeWidth={2}
-                          name="📈 Lợi nhuận"
+                          name="📈 Profit"
+                          dot={{ fill: '#fbbf24', r: 5 }}
                         />
                       </LineChart>
                     )}
                   </ResponsiveContainer>
                 ) : (
                   <div className="text-center py-16">
-                    <p className="text-gray-500">Không có dữ liệu trong năm {chartYear}</p>
+                    <p className="text-gray-500 text-lg">No data available for {chartYear}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Transactions Table */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="bg-gray-100 border-b p-4">
-                <h2 className="text-xl font-bold text-gray-900">📊 Giao dịch Nạp tiền</h2>
+            {/* ========== Transactions Table Card ========== */}
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <FaMoneyBillWave /> Recharge Transactions
+                </h2>
+                <p className="text-purple-100 text-sm mt-1">All user wallet recharge records</p>
               </div>
 
               {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
-                  <p className="text-red-700 font-semibold">❌ Lỗi</p>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4 rounded">
+                  <p className="text-red-700 font-semibold">❌ Error</p>
                   <p className="text-red-600 text-sm mt-1">{error}</p>
                 </div>
               )}
@@ -514,48 +508,48 @@ export default function AdminTransactions() {
                     <table className="w-full">
                       <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr>
-                          <th className="px-6 py-3 text-left text-sm font-bold">STT</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Ngày tạo</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Loại</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Số tiền</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Trạng thái</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Post ID</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Course ID</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">No.</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Date</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Type</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Amount</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Status</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Post ID</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Course ID</th>
                         </tr>
                       </thead>
                       <tbody>
                         {transactions.length > 0 ? (
                           transactions.map((tx, index) => (
-                            <tr key={tx.id} className="border-b hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-3 text-sm">
+                            <tr
+                              key={tx.id}
+                              className="border-b hover:bg-gray-50 transition-colors"
+                            >
+                              <td className="px-6 py-4 text-sm font-semibold text-gray-900">
                                 {pageNo * pageSize + index + 1}
                               </td>
-                              <td className="px-6 py-3 text-sm text-gray-600">
-                                {new Date(tx.createdAt).toLocaleDateString('vi-VN', {
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                {formatDate(tx.createdAt)}
                               </td>
-                              <td className="px-6 py-3 text-sm">
+                              <td className="px-6 py-4 text-sm">
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${getTransactionTypeColor(tx.transactionType)}`}>
                                   {tx.transactionType}
                                 </span>
                               </td>
-                              <td className="px-6 py-3 text-sm font-bold text-green-600">
-                                {tx.amount?.toLocaleString('vi-VN')} VNĐ
+                              <td className="px-6 py-4 text-sm font-bold text-green-600">
+                                {tx.amount?.toLocaleString('en-US')} VNĐ
                               </td>
-                              <td className="px-6 py-3 text-sm">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(tx.status)}`}>
+                              <td className="px-6 py-4 text-sm">
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${getStatusColor(tx.status)}`}>
+                                  {tx.status === 'SUCCESS' && <FaCheckCircle size={12} />}
+                                  {tx.status === 'FAILED' && <FaTimesCircle size={12} />}
+                                  {tx.status === 'PENDING' && <FaClock size={12} />}
                                   {tx.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-3 text-sm text-gray-600 font-mono">
+                              <td className="px-6 py-4 text-sm text-gray-600 font-mono">
                                 {tx.postId ? tx.postId.substring(0, 8) + '...' : '-'}
                               </td>
-                              <td className="px-6 py-3 text-sm text-gray-600 font-mono">
+                              <td className="px-6 py-4 text-sm text-gray-600 font-mono">
                                 {tx.courseId ? tx.courseId.substring(0, 8) + '...' : '-'}
                               </td>
                             </tr>
@@ -563,8 +557,8 @@ export default function AdminTransactions() {
                         ) : (
                           <tr>
                             <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
-                              <FaWallet className="text-4xl text-gray-300 mx-auto mb-2" />
-                              <p className="text-lg">Không tìm thấy giao dịch nào</p>
+                              <FaMoneyBillWave className="text-4xl text-gray-300 mx-auto mb-2" />
+                              <p className="text-lg">No transactions found</p>
                             </td>
                           </tr>
                         )}
@@ -574,23 +568,23 @@ export default function AdminTransactions() {
 
                   {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-4 mt-8 px-4 py-4 border-t">
+                    <div className="flex justify-center items-center gap-4 px-6 py-6 border-t border-gray-200">
                       <button
                         onClick={handlePrevPage}
                         disabled={pageNo === 0}
-                        className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#03ccba] hover:text-[#03ccba] transition-all font-semibold"
+                        className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition-all font-semibold"
                       >
-                        ← Trang trước
+                        ← Previous
                       </button>
-                      <span className="px-6 py-3 font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg">
-                        Trang {pageNo + 1} / {totalPages}
+                      <span className="px-6 py-3 font-bold text-gray-700 bg-gray-100 rounded-lg">
+                        Page {pageNo + 1} / {totalPages}
                       </span>
                       <button
                         onClick={handleNextPage}
                         disabled={pageNo >= totalPages - 1}
-                        className="px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all font-semibold"
+                        className="px-6 py-3 bg-[#03ccba] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#02b5a5] transition-all font-semibold"
                       >
-                        Trang sau →
+                        Next →
                       </button>
                     </div>
                   )}
@@ -600,58 +594,73 @@ export default function AdminTransactions() {
           </div>
         )}
 
-        {/* ==================== VIRTUAL TRANSACTIONS TAB (NEW) ==================== */}
+        {/* ==================== VIRTUAL TRANSACTIONS TAB ==================== */}
         {activeTab === 'virtual' && (
           <div className="space-y-8">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg shadow p-6 border-l-4 border-orange-500">
-                <p className="text-gray-600 text-sm font-semibold">💸 Tổng Rút tiền</p>
-                <p className="text-3xl font-bold text-orange-600 mt-2">
+            {/* ========== Stats Cards ========== */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg shadow p-6 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
+                <p className="text-gray-600 text-sm font-semibold mb-2">💸 Total Withdrawn</p>
+                <p className="text-3xl font-bold text-orange-600">
                   {(virtualTransactions
-                    .filter(t => t.type === 'WITHDRAW' && t.status === 'SUCCESS')
-                    .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000000).toFixed(2)}M VNĐ
+                    .filter((t) => t.type === 'WITHDRAW' && t.status === 'SUCCESS')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000000).toFixed(2)}
+                  M VNĐ
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
-                  {virtualTransactions.filter(t => t.type === 'WITHDRAW' && t.status === 'SUCCESS').length} giao dịch thành công
+                  {virtualTransactions.filter((t) => t.type === 'WITHDRAW' && t.status === 'SUCCESS').length} successful
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg shadow p-6 border-l-4 border-yellow-500">
-                <p className="text-gray-600 text-sm font-semibold">⏳ Chờ xử lý</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-2">
-                  {virtualTransactions.filter(t => t.status === 'PENDING').length}
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg shadow p-6 border-l-4 border-yellow-500 hover:shadow-lg transition-shadow">
+                <p className="text-gray-600 text-sm font-semibold mb-2">⏳ Pending</p>
+                <p className="text-3xl font-bold text-yellow-600">
+                  {virtualTransactions.filter((t) => t.status === 'PENDING').length}
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
                   {(virtualTransactions
-                    .filter(t => t.status === 'PENDING')
-                    .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000000).toFixed(2)}M VNĐ
+                    .filter((t) => t.status === 'PENDING')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000000).toFixed(2)}
+                  M VNĐ
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-lg shadow p-6 border-l-4 border-red-500">
-                <p className="text-gray-600 text-sm font-semibold">❌ Thất bại</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">
-                  {virtualTransactions.filter(t => t.status === 'FAILED').length}
+              <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-lg shadow p-6 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
+                <p className="text-gray-600 text-sm font-semibold mb-2">❌ Failed</p>
+                <p className="text-3xl font-bold text-red-600">
+                  {virtualTransactions.filter((t) => t.status === 'FAILED').length}
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
                   {(virtualTransactions
-                    .filter(t => t.status === 'FAILED')
-                    .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000000).toFixed(2)}M VNĐ
+                    .filter((t) => t.status === 'FAILED')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000000).toFixed(2)}
+                  M VNĐ
                 </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg shadow p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+                <p className="text-gray-600 text-sm font-semibold mb-2">📊 Total Requests</p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {virtualTransactions.length}
+                </p>
+                <p className="text-xs text-gray-600 mt-2">All withdrawal requests</p>
               </div>
             </div>
 
-            {/* Virtual Transactions Table */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* ========== Virtual Transactions Table ========== */}
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6">
-                <h2 className="text-2xl font-bold">💳 Lịch sử Rút tiền (Withdrawals)</h2>
-                <p className="text-orange-100 text-sm mt-2">Quản lý tất cả yêu cầu rút tiền từ người dùng</p>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  💳 Withdrawal History
+                </h2>
+                <p className="text-orange-100 text-sm mt-1">
+                  Manage all user withdrawal requests
+                </p>
               </div>
 
               {errorVirtual && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
-                  <p className="text-red-700 font-semibold">❌ Lỗi</p>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4 rounded">
+                  <p className="text-red-700 font-semibold">❌ Error</p>
                   <p className="text-red-600 text-sm mt-1">{errorVirtual}</p>
                 </div>
               )}
@@ -666,60 +675,69 @@ export default function AdminTransactions() {
                     <table className="w-full">
                       <thead className="bg-gray-100 border-b-2 border-gray-200">
                         <tr>
-                          <th className="px-6 py-3 text-left text-sm font-bold">STT</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Ngày Rút</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Loại</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Số tiền</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Trạng thái</th>
-                          <th className="px-6 py-3 text-left text-sm font-bold">Ngày Hoàn thành</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">No.</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Date</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Type</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Amount</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Status</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Completed</th>
                         </tr>
                       </thead>
                       <tbody>
                         {virtualTransactions.length > 0 ? (
-                          virtualTransactions.map((tx, index) => (
-                            <tr key={tx.accountBalanceId || index} className="border-b hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-3 text-sm font-semibold">
-                                {pageNoVirtual * pageSize + index + 1}
-                              </td>
-                              <td className="px-6 py-3 text-sm text-gray-600">
-                                {formatDate(tx.transactionDate)}
-                              </td>
-                              <td className="px-6 py-3 text-sm">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${getVirtualTypeColor(tx.type)}`}>
-                                  {tx.type === 'WITHDRAW' ? (
-                                    <>
-                                      <FaArrowDown size={12} /> {tx.type}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FaArrowUp size={12} /> {tx.type}
-                                    </>
-                                  )}
-                                </span>
-                              </td>
-                              <td className="px-6 py-3 text-sm font-bold">
-                                <span className={tx.type === 'WITHDRAW' ? 'text-red-600' : 'text-green-600'}>
-                                  {tx.type === 'WITHDRAW' ? '-' : '+'}{tx.amount?.toLocaleString('vi-VN')} VNĐ
-                                </span>
-                              </td>
-                              <td className="px-6 py-3 text-sm">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${getStatusColor(tx.status)}`}>
-                                  {tx.status === 'SUCCESS' && '✅'}
-                                  {tx.status === 'PENDING' && '⏳'}
-                                  {tx.status === 'FAILED' && '❌'}
-                                  {tx.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-3 text-sm text-gray-600">
-                                {formatDate(tx.completedAt)}
-                              </td>
-                            </tr>
-                          ))
+                          virtualTransactions.map((tx, index) => {
+                            const typeInfo = getVirtualTypeColor(tx.type);
+                            const statusColor = getStatusColor(tx.status);
+
+                            return (
+                              <tr
+                                key={tx.accountBalanceId || index}
+                                className="border-b hover:bg-gray-50 transition-colors"
+                              >
+                                <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                                  {pageNoVirtual * pageSize + index + 1}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-600">
+                                  {formatDate(tx.transactionDate)}
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${typeInfo}`}>
+                                    {tx.type === 'WITHDRAW' ? (
+                                      <>
+                                        <FaArrowDown size={12} /> Withdrawal
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FaArrowUp size={12} /> Add Fund
+                                      </>
+                                    )}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm font-bold">
+                                  <span className={tx.type === 'WITHDRAW' ? 'text-red-600' : 'text-green-600'}>
+                                    {tx.type === 'WITHDRAW' ? '-' : '+'}
+                                    {tx.amount?.toLocaleString('en-US')} VNĐ
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 ${statusColor}`}>
+                                    {tx.status === 'SUCCESS' && <FaCheckCircle size={12} />}
+                                    {tx.status === 'PENDING' && <FaClock size={12} />}
+                                    {tx.status === 'FAILED' && <FaTimesCircle size={12} />}
+                                    {tx.status}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-600">
+                                  {formatDate(tx.completedAt)}
+                                </td>
+                              </tr>
+                            );
+                          })
                         ) : (
                           <tr>
-                            <td colSpan="6" className="px-6 py-8 text-center">
+                            <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                               <FaArrowDown className="text-4xl text-gray-300 mx-auto mb-2" />
-                              <p className="text-gray-500 text-lg">Chưa có yêu cầu rút tiền</p>
+                              <p className="text-lg">No withdrawal requests yet</p>
                             </td>
                           </tr>
                         )}
@@ -729,23 +747,23 @@ export default function AdminTransactions() {
 
                   {/* Pagination */}
                   {totalPagesVirtual > 1 && (
-                    <div className="flex justify-center items-center gap-4 mt-8 px-4 py-4 border-t">
+                    <div className="flex justify-center items-center gap-4 px-6 py-6 border-t border-gray-200">
                       <button
                         onClick={handlePrevPage}
                         disabled={pageNoVirtual === 0}
-                        className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-orange-500 hover:text-orange-600 transition-all font-semibold"
+                        className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400 transition-all font-semibold"
                       >
-                        ← Trang trước
+                        ← Previous
                       </button>
-                      <span className="px-6 py-3 font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg">
-                        Trang {pageNoVirtual + 1} / {totalPagesVirtual}
+                      <span className="px-6 py-3 font-bold text-gray-700 bg-gray-100 rounded-lg">
+                        Page {pageNoVirtual + 1} / {totalPagesVirtual}
                       </span>
                       <button
                         onClick={handleNextPage}
                         disabled={pageNoVirtual >= totalPagesVirtual - 1}
-                        className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all font-semibold"
+                        className="px-6 py-3 bg-[#03ccba] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#02b5a5] transition-all font-semibold"
                       >
-                        Trang sau →
+                        Next →
                       </button>
                     </div>
                   )}

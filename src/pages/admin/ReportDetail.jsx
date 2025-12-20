@@ -1,185 +1,210 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaArrowLeft, FaSpinner, FaCheck, FaTimesCircle, FaComments, FaCalendar, FaUser, FaFileAlt } from 'react-icons/fa';
+import {
+  FaArrowLeft,
+  FaSpinner,
+  FaCheck,
+  FaTimesCircle,
+  FaComments,
+  FaCalendar,
+  FaUser,
+  FaFileAlt,
+  FaImage,
+  FaEnvelope,
+  FaClock,
+} from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import reportApi from '../../api/reportApi';
 import chatApi from '../../api/chatApi';
+import postApi from '../../api/postApi';
+import userApi from '../../api/userApi';
 
 const DEBUG = true;
 
 export default function ReportDetail() {
   const navigate = useNavigate();
   const { reportId } = useParams();
+
+  // State
   const [report, setReport] = useState(null);
   const [room, setRoom] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
+  const [post, setPost] = useState(null);
+  const [reporter, setReporter] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState(false);
-  const [activeTab, setActiveTab] = useState('detail'); // detail / chat
+  const [activeTab, setActiveTab] = useState('detail');
   const [error, setError] = useState(null);
 
+  // ==================== EFFECTS ====================
   useEffect(() => {
     fetchReportDetail();
   }, [reportId]);
 
+  // ==================== API CALLS ====================
+
+  // ✅ Fetch Report Detail
   const fetchReportDetail = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      // ✅ STEP 1: Lấy report detail
+      if (DEBUG) console.log('📋 Fetching report detail...');
+
+      // STEP 1: Get report data
       const reportData = await reportApi.getReportById(reportId);
-      if (DEBUG) console.log('Report data:', reportData);
+      if (DEBUG) console.log('📋 Report data:', reportData);
       setReport(reportData);
 
-      // ✅ STEP 2: Backend đã trả về chatRoomId sẵn rồi!
-      // Không cần match postId nữa
-      if (reportData.chatRoomId) {
+      // STEP 2: Fetch post by postId to get imageUrl
+      if (reportData?.postId) {
         try {
-          if (DEBUG) console.log('📍 Using chatRoomId from report:', reportData.chatRoomId);
-          
-          // ✅ Lấy room detail trực tiếp
+          if (DEBUG) console.log('📷 Fetching post for image...', reportData.postId);
+          const postData = await postApi.getPostById(reportData.postId);
+          const postDetail = postData?.data?.data || postData?.data || postData;
+          if (DEBUG) console.log('📷 Post data:', postDetail);
+          setPost(postDetail);
+        } catch (postErr) {
+          console.error('❌ Error fetching post:', postErr);
+        }
+      }
+
+      // STEP 3: Fetch reporter info by senderId
+      if (reportData?.senderId) {
+        try {
+          if (DEBUG) console.log('👤 Fetching reporter info...', reportData.senderId);
+          const users = await userApi.getAllUsers(0, 1000);
+          let usersList = [];
+          if (users.data?.items && Array.isArray(users.data.items)) {
+            usersList = users.data.items;
+          } else if (Array.isArray(users.data)) {
+            usersList = users.data;
+          }
+          const reporterUser = usersList.find(
+            (u) => u.id === reportData.senderId || String(u.id) === String(reportData.senderId)
+          );
+          if (DEBUG) console.log('👤 Reporter:', reporterUser);
+          setReporter(reporterUser);
+        } catch (userErr) {
+          console.error('❌ Error fetching reporter:', userErr);
+        }
+      }
+
+      // STEP 4: Fetch chat room by chatRoomId
+      if (reportData?.chatRoomId) {
+        try {
+          if (DEBUG) console.log('💬 Fetching room...', reportData.chatRoomId);
           const roomData = await chatApi.getRoomById(reportData.chatRoomId);
-          
-          if (DEBUG) console.log('✅ Room found:', roomData);
+          if (DEBUG) console.log('💬 Room data:', roomData);
           setRoom(roomData);
 
-          // ✅ Fetch messages từ room
+          // STEP 5: Fetch messages from room
           if (roomData?.id) {
             try {
               const messagesData = await chatApi.getMessages(roomData.id);
               let messages = [];
-              
+
               if (messagesData?.data && Array.isArray(messagesData.data)) {
                 messages = messagesData.data;
               } else if (Array.isArray(messagesData)) {
                 messages = messagesData;
               }
-              
+
               setChatMessages(messages);
-              if (DEBUG) console.log('✅ Messages loaded:', messages.length);
+              if (DEBUG) console.log('💬 Messages loaded:', messages.length);
             } catch (msgErr) {
-              console.error('Error fetching messages:', msgErr);
+              console.error('❌ Error fetching messages:', msgErr);
               setChatMessages([]);
             }
           }
-        } catch (err) {
-          if (DEBUG) console.error('❌ Error fetching room by chatRoomId:', err);
-          setError('❌ Không tìm thấy phòng chat');
-          setRoom(null);
-          setChatMessages([]);
+        } catch (roomErr) {
+          console.error('❌ Error fetching room:', roomErr);
+          setError('Unable to load chat room');
         }
-      } else if (reportData.postId) {
-        // ✅ Fallback: Nếu không có chatRoomId, match bằng postId
-        if (DEBUG) console.log('⚠️ No chatRoomId, trying postId match...');
-        
-        try {
-          const conversationsData = await chatApi.getConversations(0, 100);
-          
-          let conversations = [];
-          if (conversationsData?.data?.rooms && Array.isArray(conversationsData.data.rooms)) {
-            conversations = conversationsData.data.rooms;
-          } else if (conversationsData?.rooms && Array.isArray(conversationsData.rooms)) {
-            conversations = conversationsData.rooms;
-          } else if (Array.isArray(conversationsData)) {
-            conversations = conversationsData;
-          }
-
-          const matchedRoom = conversations.find(
-            room => String(room.postId) === String(reportData.postId)
-          );
-
-          if (matchedRoom) {
-            if (DEBUG) console.log('✅ Room matched via postId:', matchedRoom);
-            setRoom(matchedRoom);
-
-            try {
-              const messagesData = await chatApi.getMessages(matchedRoom.id);
-              let messages = Array.isArray(messagesData) ? messagesData : [];
-              setChatMessages(messages);
-            } catch (msgErr) {
-              console.error('Error fetching messages:', msgErr);
-              setChatMessages([]);
-            }
-          } else {
-            if (DEBUG) console.error('❌ No room match via postId');
-            setError('❌ Không tìm thấy phòng chat');
-          }
-        } catch (err) {
-          console.error('Error fetching conversations:', err);
-          setError('Không thể tải danh sách phòng chat');
-        }
-      } else {
-        setError('❌ Report không có chatRoomId hoặc postId');
       }
     } catch (err) {
-      console.error('Error:', err);
+      console.error('❌ Error:', err);
       setError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Handle resolve - Normal
+  // ==================== HANDLERS ====================
+
+  // ✅ Handle Resolve - Normal
   const handleResolveNormal = async () => {
-    if (!window.confirm('Xác nhận: Bình thường (không hoàn tiền)?')) return;
+    if (!window.confirm('Confirm: Mark as Resolved (Normal)? No refund will be issued.'))
+      return;
 
     if (!room?.id) {
-      alert('❌ Lỗi: Không tìm thấy roomId');
+      alert('❌ Error: Room ID not found');
       return;
     }
 
     try {
       setResolving(true);
-      
-      // ✅ PUT /grabtutor/room/resolve?roomId={roomId}&isNormal=true
       await reportApi.resolveReport(room.id, true);
-      
-      alert('✅ Đã giải quyết: RESOLVED_NORMAL');
+      alert('✅ Report resolved: RESOLVED_NORMAL');
       navigate('/admin/interactions');
     } catch (err) {
-      console.error('Error:', err);
-      alert('❌ Lỗi: ' + (err.response?.data?.message || err.message));
+      console.error('❌ Error:', err);
+      alert('❌ Error: ' + (err.response?.data?.message || err.message));
     } finally {
       setResolving(false);
     }
   };
 
-  // ✅ Handle resolve - Refund
+  // ✅ Handle Resolve - Refund
   const handleResolveRefund = async () => {
-    if (!window.confirm('Xác nhận: Hoàn tiền & kết thúc?')) return;
+    if (!window.confirm('Confirm: Mark as Resolved (Refund)? Student will be refunded.'))
+      return;
 
     if (!room?.id) {
-      alert('❌ Lỗi: Không tìm thấy roomId');
+      alert('❌ Error: Room ID not found');
       return;
     }
 
     try {
       setResolving(true);
-      
-      // ✅ PUT /grabtutor/room/resolve?roomId={roomId}&isNormal=false
       await reportApi.resolveReport(room.id, false);
-      
-      alert('✅ Đã giải quyết: RESOLVED_REFUND (đã hoàn tiền)');
+      alert('✅ Report resolved: RESOLVED_REFUND (refund issued)');
       navigate('/admin/interactions');
     } catch (err) {
-      console.error('Error:', err);
-      alert('❌ Lỗi: ' + (err.response?.data?.message || err.message));
+      console.error('❌ Error:', err);
+      alert('❌ Error: ' + (err.response?.data?.message || err.message));
     } finally {
       setResolving(false);
     }
   };
+
+  // ==================== HELPERS ====================
 
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+      month: 'short',
+      day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
+
+  // Get status badge
+  const getStatusBadge = (status) => {
+    const badges = {
+      PENDING: { text: '⏳ Pending', color: 'bg-yellow-100 text-yellow-800' },
+      REVIEWED: { text: '👁️ Under Review', color: 'bg-blue-100 text-blue-800' },
+      RESOLVED_NORMAL: { text: '✅ Resolved (Normal)', color: 'bg-green-100 text-green-800' },
+      RESOLVED_REFUND: { text: '✅ Resolved (Refund)', color: 'bg-green-100 text-green-800' },
+      RESOLVED: { text: '✅ Resolved', color: 'bg-green-100 text-green-800' },
+    };
+    return badges[status] || { text: status || 'Unknown', color: 'bg-gray-100 text-gray-800' };
+  };
+
+  // ==================== LOADING STATE ====================
 
   if (loading) {
     return (
@@ -188,59 +213,65 @@ export default function ReportDetail() {
         <div className="flex justify-center items-center h-96">
           <div className="text-center">
             <FaSpinner className="animate-spin text-5xl text-[#03ccba] mb-4" />
-            <p className="text-gray-600 text-lg">Đang tải chi tiết báo cáo...</p>
+            <p className="text-gray-600 text-lg">Loading report details...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!report) {
+  if (error && !report) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-12 text-center">
-          <p className="text-xl text-red-600 font-semibold mb-4">❌ Báo cáo không tìm thấy</p>
-          {error && <p className="text-gray-600 mb-6">{error}</p>}
-          <button
-            onClick={() => navigate('/admin/interactions')}
-            className="px-6 py-2 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-all"
-          >
-            Quay lại
-          </button>
+        <div className="flex justify-center items-center h-96">
+          <div className="text-center">
+            <p className="text-xl text-red-600 font-semibold mb-4">❌ {error}</p>
+            <button
+              onClick={() => navigate('/admin/interactions')}
+              className="px-6 py-2 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-all"
+            >
+              Back to Reports
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ==================== RENDER ====================
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Header */}
+      {/* ==================== HEADER ==================== */}
       <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white py-12 px-4 shadow-lg">
         <div className="max-w-7xl mx-auto">
           <button
             onClick={() => navigate('/admin/interactions')}
             className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
           >
-            <FaArrowLeft size={20} /> Quay lại
+            <FaArrowLeft size={20} /> Back to Reports
           </button>
-          <h1 className="text-4xl md:text-5xl font-bold">📋 Chi tiết Báo cáo</h1>
-          <p className="text-teal-100 mt-2">Report #{report.id?.slice(0, 12) || 'N/A'}</p>
+          <h1 className="text-4xl md:text-5xl font-bold">📋 Report Details</h1>
+          {report && (
+            <p className="text-teal-100 mt-2">
+              Reported on {formatDate(report.createdAt)}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Content */}
+      {/* ==================== CONTENT ==================== */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg">
             <p className="text-red-700 font-semibold">❌ {error}</p>
           </div>
         )}
 
-        {/* Tabs */}
+        {/* ==================== TABS ==================== */}
         <div className="flex gap-4 mb-6 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('detail')}
@@ -250,7 +281,7 @@ export default function ReportDetail() {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            📝 Chi tiết báo cáo
+            📝 Report Details
           </button>
           <button
             onClick={() => setActiveTab('chat')}
@@ -260,181 +291,244 @@ export default function ReportDetail() {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <FaComments size={16} />
-            💬 Đoạn chat ({chatMessages.length})
+            <FaComments /> Chat ({chatMessages.length})
           </button>
         </div>
 
-        {/* Tab Content - Detail */}
-        {activeTab === 'detail' && (
-          <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
-            {/* Report Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-l-4 border-[#03ccba]">
-              <div>
-                <p className="text-gray-600 text-sm font-semibold mb-1">📊 Status</p>
-                <p className="text-2xl font-bold text-[#03ccba]">{report.status || 'PENDING'}</p>
+        {/* ==================== TAB: DETAIL ==================== */}
+        {activeTab === 'detail' && report && (
+          <div className="space-y-6">
+            {/* Status Card */}
+            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-[#03ccba]">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Report Information</h2>
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-bold ${
+                    getStatusBadge(report.status).color
+                  }`}
+                >
+                  {getStatusBadge(report.status).text}
+                </span>
               </div>
-              <div>
-                <p className="text-gray-600 text-sm font-semibold mb-1">🆔 Report ID</p>
-                <p className="text-lg font-mono text-gray-900">{report.id?.slice(0, 16) || 'N/A'}...</p>
-              </div>
+              <p className="text-gray-600">
+                {report.status === 'PENDING'
+                  ? 'This report is awaiting review'
+                  : 'This report has been resolved'}
+              </p>
             </div>
 
-            {/* Report Info Grid */}
+            {/* ✅ Post Image Display */}
+            {post?.imageUrl && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-4">
+                  <FaImage size={16} /> Post Image
+                </p>
+                <div className="bg-gray-50 rounded-lg border-2 border-gray-200 p-4 max-w-md">
+                  <img
+                    src={post.imageUrl}
+                    alt={post.title || 'Post image'}
+                    className="w-full h-64 object-cover rounded-lg shadow-md"
+                  />
+                  {post.title && (
+                    <p className="text-sm text-gray-600 mt-3 font-semibold">
+                      📄 {post.title}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Reporter Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Date */}
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
                 <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-2">
-                  <FaCalendar size={14} /> Ngày báo cáo
+                  <FaCalendar size={14} /> Report Date
                 </p>
-                <p className="text-base font-bold text-gray-900">{formatDate(report.createdAt)}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {formatDate(report.createdAt)}
+                </p>
+              </div>
+
+              {/* Reporter Email */}
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+                <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-2">
+                  <FaEnvelope size={14} /> Reporter Email
+                </p>
+                <p className="text-lg font-bold text-gray-900">
+                  {reporter?.email || 'Unknown Email'}
+                </p>
+                {reporter?.fullName && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {reporter.fullName}
+                  </p>
+                )}
               </div>
 
               {/* Post ID */}
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-2">
-                  <FaFileAlt size={14} /> Post ID
-                </p>
-                <p className="text-base font-mono text-gray-900">{report.postId?.slice(0, 16) || 'N/A'}...</p>
-              </div>
-
-              {/* Room Found */}
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-2">
-                  <FaComments size={14} /> Phòng chat
-                </p>
-                <p className={`text-base font-bold ${room ? 'text-green-600' : 'text-red-600'}`}>
-                  {room ? `✅ ${room.id?.slice(0, 12)}...` : '❌ Không tìm thấy'}
-                </p>
-              </div>
-
-              {/* Sender */}
-              {report.senderId && (
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {report.postId && (
+                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
                   <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-2">
-                    <FaUser size={14} /> Người báo cáo
+                    <FaFileAlt size={14} /> Post ID
                   </p>
-                  <p className="text-base font-mono text-gray-900">{report.senderId?.slice(0, 16) || 'N/A'}...</p>
+                  <p className="text-sm font-mono text-gray-900 break-all">
+                    {report.postId}
+                  </p>
                 </div>
               )}
-            </div>
 
-            {/* Report Detail Content */}
-            <div className="border-t pt-6">
-              <p className="text-gray-600 text-sm font-semibold mb-3 flex items-center gap-2">
-                <FaFileAlt size={14} /> Nội dung báo cáo
-              </p>
-              <div className="bg-gray-50 p-6 rounded-lg border-l-4 border-red-500">
-                <p className="text-base text-gray-800 whitespace-pre-wrap leading-relaxed">
-                  {report.detail || 'Không có nội dung'}
+              {/* Chat Room Status */}
+              <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
+                <p className="text-gray-600 text-sm font-semibold flex items-center gap-2 mb-2">
+                  <FaComments size={14} /> Chat Room
+                </p>
+                <p className={`text-lg font-bold ${room ? 'text-green-600' : 'text-red-600'}`}>
+                  {room ? `✅ Found` : '❌ Not Found'}
                 </p>
               </div>
             </div>
 
-            {/* Resolve Buttons */}
-            {room ? (
-              <div className="border-t pt-6 space-y-4">
+            {/* Report Content */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <p className="text-gray-600 text-sm font-semibold mb-3 flex items-center gap-2">
+                <FaFileAlt size={14} /> Report Content
+              </p>
+              <div className="bg-red-50 p-6 rounded-lg border-l-4 border-red-500">
+                <p className="text-base text-gray-800 whitespace-pre-wrap leading-relaxed">
+                  {report.detail || 'No content provided'}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            {report.status === 'PENDING' && room && (
+              <div className="bg-white rounded-lg shadow-md p-6 border-t">
                 <p className="text-gray-700 font-semibold mb-4">
-                  🔧 Chọn hành động để giải quyết báo cáo:
+                  🔧 Choose an action to resolve this report:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Normal Button */}
                   <button
                     onClick={handleResolveNormal}
                     disabled={resolving}
-                    className="px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
                   >
                     {resolving ? (
                       <>
-                        <FaSpinner className="animate-spin" size={16} />
-                        <span>Đang xử lý...</span>
+                        <FaSpinner className="animate-spin" />
+                        Processing...
                       </>
                     ) : (
                       <>
                         <FaCheck size={16} />
-                        <span>✅ Bình thường (Không hoàn tiền)</span>
+                        Resolve (Normal)
                       </>
                     )}
                   </button>
-
-                  {/* Refund Button */}
                   <button
                     onClick={handleResolveRefund}
                     disabled={resolving}
-                    className="px-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg hover:shadow-lg font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
                   >
                     {resolving ? (
                       <>
-                        <FaSpinner className="animate-spin" size={16} />
-                        <span>Đang xử lý...</span>
+                        <FaSpinner className="animate-spin" />
+                        Processing...
                       </>
                     ) : (
                       <>
-                        <FaTimesCircle size={16} />
-                        <span>💰 Hoàn tiền</span>
+                        <FaCheck size={16} />
+                        Resolve (Refund)
                       </>
                     )}
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
-                <p className="text-red-700 font-semibold">❌ Không thể giải quyết</p>
+            )}
+
+            {!room && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+                <p className="text-red-700 font-semibold">❌ Cannot Resolve</p>
                 <p className="text-red-600 text-sm mt-1">
-                  Không tìm thấy phòng chat tương ứng. Kiểm tra lại postId hoặc thử tải lại trang.
+                  Chat room not found. Check postId or try refreshing the page.
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Tab Content - Chat */}
+        {/* ==================== TAB: CHAT ==================== */}
         {activeTab === 'chat' && (
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            {chatMessages.length === 0 ? (
-              <div className="text-center py-12">
-                <FaComments className="text-6xl text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">Không có tin nhắn</p>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {chatMessages.map((msg, idx) => (
-                  <div key={idx} className="p-4 bg-gray-50 rounded-lg border-l-4 border-[#03ccba] hover:bg-gray-100 transition-colors">
-                    <div className="flex justify-between items-start gap-4 mb-2">
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{msg.email || msg.senderEmail || 'User'}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(msg.createdAt).toLocaleTimeString('vi-VN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })}
-                        </p>
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            {/* Chat Header */}
+            <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <FaComments /> Chat Messages ({chatMessages.length})
+              </h2>
+              <p className="text-teal-100 text-sm mt-1">
+                Conversation between reporter and tutee
+              </p>
+            </div>
+
+            {/* Messages Container */}
+            <div className="p-6">
+              {chatMessages.length === 0 ? (
+                <div className="text-center py-12">
+                  <FaComments className="text-6xl text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg font-semibold">No messages found</p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    There are no messages in this chat conversation
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {chatMessages.map((msg, idx) => (
+                    <div key={msg.id || idx} className="flex gap-4 pb-4 border-b last:border-b-0">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        {(msg.email || msg.senderEmail)?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+
+                      {/* Message Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Email & Time */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <p className="font-semibold text-gray-900 flex items-center gap-1">
+                            <FaEnvelope size={12} className="text-gray-500" />
+                            {msg.email || msg.senderEmail || 'Unknown'}
+                          </p>
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <FaClock size={10} />
+                            {formatDate(msg.createdAt)}
+                          </span>
+                        </div>
+
+                        {/* Message Text */}
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-gray-700 break-words">
+                            {msg.content || msg.message || 'No content'}
+                          </p>
+                        </div>
+
+                        {/* Attachment */}
+                        {(msg.fileUrl || msg.file) && (
+                          <div className="mt-2">
+                            <a
+                              href={msg.fileUrl || msg.file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#03ccba] hover:underline text-sm font-semibold flex items-center gap-1"
+                            >
+                              <FaFileAlt size={12} />
+                              View Attachment
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    
-                    {/* Message Content */}
-                    <p className="text-gray-700 mt-2 text-base leading-relaxed">
-                      {msg.message || msg.content || 'No content'}
-                    </p>
-
-                    {/* File Attachment */}
-                    {(msg.fileUrl || msg.file) && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <a 
-                          href={msg.fileUrl || msg.file} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-[#03ccba] text-sm font-semibold hover:underline flex items-center gap-2"
-                        >
-                          📎 {msg.fileName || 'File'}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
