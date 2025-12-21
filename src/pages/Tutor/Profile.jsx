@@ -31,8 +31,15 @@ export default function Profile() {
   // ==================== FETCH DATA ====================
   useEffect(() => {
     if (user && user.userId) {
-      fetchTutorInfo();
-      fetchMyInfo(); // ✅ NEW - Fetch my info
+      console.log('🔄 Starting to fetch Tutor Profile data...');
+      Promise.all([
+        fetchTutorInfo(),
+        fetchMyInfo()
+      ]).then(() => {
+        console.log('✅ Both API calls completed');
+      }).catch(err => {
+        console.error('❌ Error in profile data fetch:', err);
+      });
     }
   }, [user]);
 
@@ -41,13 +48,14 @@ export default function Profile() {
     try {
       setLoading(true);
       console.log('=== fetchTutorInfo START ===');
-      console.log('userId:', user.userId);
+      console.log('📝 userId:', user.userId);
       
       const response = await userApi.getTutorInfo(user.userId);
       
       const tutorData = response.data || response;
       console.log('=== TutorInfo Response ===');
       console.log(JSON.stringify(tutorData, null, 2));
+      console.log('📌 tutorInfo.userId:', tutorData.userId);
       
       // ✅ Set tutor info
       setTutorInfo(tutorData);
@@ -62,16 +70,17 @@ export default function Profile() {
       
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching tutor info:', error);
+      console.error('❌ Error fetching tutor info:', error);
       setTutorInfo(null);
       setLoading(false);
     }
   };
 
-  // ✅ NEW - Fetch MyInfo (fullName, role, dob, email)
+  // ✅ NEW - Fetch MyInfo (fullName, role, dob, email, userStatus)
   const fetchMyInfo = async () => {
     try {
       console.log('=== fetchMyInfo START ===');
+      console.log('📝 Current user.userId:', user.userId);
       
       const response = await userApi.getMyInfo();
       
@@ -79,16 +88,24 @@ export default function Profile() {
       console.log('=== MyInfo Response ===');
       console.log(JSON.stringify(myInfoData, null, 2));
       
-      // ✅ Match userId
+      // ✅ Match userId between getTutorInfo and getMyInfo
+      console.log('📊 Matching userIds:');
+      console.log('  - tutorInfo.userId:', tutorInfo?.userId);
+      console.log('  - myInfoData.userId:', myInfoData.userId);
+      console.log('  - user.userId:', user.userId);
+      
       if (myInfoData.userId === user.userId) {
-        console.log('✅ userId matched!');
+        console.log('✅ userId matched successfully!');
+        console.log('📌 userStatus from myInfo:', myInfoData.userStatus);
         setMyInfo(myInfoData);
       } else {
-        console.warn('⚠️ userId mismatch');
+        console.warn('⚠️ userId mismatch - setting data anyway');
+        console.log('  Expected:', user.userId);
+        console.log('  Got:', myInfoData.userId);
         setMyInfo(myInfoData);
       }
     } catch (error) {
-      console.error('Error fetching my info:', error);
+      console.error('❌ Error fetching my info:', error);
       setMyInfo(null);
     }
   };
@@ -433,12 +450,17 @@ export default function Profile() {
                 </div>
 
                 {/* Account Status */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200">
+                <div className={`p-6 rounded-lg border-2 ${myInfo?.userStatus === 'PENDING' ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'}`}>
                   <p className="text-sm font-semibold text-gray-700 mb-2">Account Status</p>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <p className="text-lg font-bold text-green-600">Active</p>
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${myInfo?.userStatus === 'PENDING' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+                    <p className={`text-lg font-bold ${myInfo?.userStatus === 'PENDING' ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {myInfo?.userStatus === 'PENDING' ? 'Pending Verification' : 'Active'}
+                    </p>
                   </div>
+                  {myInfo?.userStatus === 'PENDING' && (
+                    <p className="text-xs text-yellow-700 mt-2">Waiting for admin approval...</p>
+                  )}
                 </div>
               </div>
             </div>

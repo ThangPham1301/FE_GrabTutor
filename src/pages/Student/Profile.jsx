@@ -10,6 +10,7 @@ export default function Profile() {
   const { user, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [myInfo, setMyInfo] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
     phoneNumber: '',
@@ -18,7 +19,14 @@ export default function Profile() {
 
   useEffect(() => {
     if (user) {
-      fetchFullUserInfo();
+      Promise.all([
+        fetchFullUserInfo(),
+        fetchMyInfo()
+      ]).then(() => {
+        console.log('✅ Both API calls completed');
+      }).catch(err => {
+        console.error('❌ Error in profile data fetch:', err);
+      });
     }
   }, [user]);
 
@@ -54,6 +62,37 @@ export default function Profile() {
       });
       
       setLoading(false);
+    }
+  };
+
+  // ✅ Fetch MyInfo to get userStatus
+  const fetchMyInfo = async () => {
+    try {
+      console.log('=== fetchMyInfo START ===');
+      console.log('📝 Current user.userId:', user.userId);
+      
+      const response = await userApi.getMyInfo();
+      
+      const myInfoData = response.data || response;
+      console.log('=== MyInfo Response ===');
+      console.log(JSON.stringify(myInfoData, null, 2));
+      
+      // ✅ Match userId
+      console.log('📊 userId Matching:');
+      console.log('  - myInfoData.userId:', myInfoData.userId);
+      console.log('  - user.userId:', user.userId);
+      
+      if (myInfoData.userId === user.userId) {
+        console.log('✅ userId matched successfully!');
+        console.log('📌 userStatus from myInfo:', myInfoData.userStatus);
+        setMyInfo(myInfoData);
+      } else {
+        console.warn('⚠️ userId mismatch - setting data anyway');
+        setMyInfo(myInfoData);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching my info:', error);
+      setMyInfo(null);
     }
   };
 
@@ -266,11 +305,16 @@ export default function Profile() {
                   <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-semibold text-[#03ccba]">
                     Account Status
                   </label>
-                  <div className="border-2 border-green-200 rounded-xl p-4 bg-green-50">
+                  <div className={`border-2 rounded-xl p-4 ${myInfo?.userStatus === 'PENDING' ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-900 font-medium text-lg">Active</span>
+                      <div className={`w-3 h-3 rounded-full animate-pulse ${myInfo?.userStatus === 'PENDING' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+                      <span className="text-gray-900 font-medium text-lg">
+                        {myInfo?.userStatus === 'PENDING' ? 'Pending Verification' : 'Active'}
+                      </span>
                     </div>
+                    {myInfo?.userStatus === 'PENDING' && (
+                      <p className="text-xs text-yellow-700 mt-2">Waiting for admin approval...</p>
+                    )}
                   </div>
                 </div>
               </div>

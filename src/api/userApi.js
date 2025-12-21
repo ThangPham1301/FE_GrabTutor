@@ -6,13 +6,26 @@ const userApi = {
   // Lấy thông tin người dùng hiện tại
   getMyInfo: async () => {
     try {
+      console.log('=== getMyInfo START ===');
+      
       const response = await axios.get(`${BASE_URL}/grabtutor/users/myInfo`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      
+      const myInfoData = response.data;
+      console.log('✅ getMyInfo SUCCESS');
+      console.log('📊 MyInfo Response:');
+      console.log('  - userId:', myInfoData.userId);
+      console.log('  - userStatus:', myInfoData.userStatus);
+      console.log('  - email:', myInfoData.email);
+      console.log('  - fullName:', myInfoData.fullName);
+      console.log('  - Full response:', JSON.stringify(myInfoData, null, 2));
+      
       return response.data;
     } catch (error) {
+      console.error('❌ getMyInfo error:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -44,13 +57,21 @@ const userApi = {
   // Lấy thông tin người dùng theo ID
   getUserById: async (userId) => {
     try {
+      console.log('=== getUserById START ===');
+      console.log('📝 userId:', userId);
+      
       const response = await axios.get(`${BASE_URL}/grabtutor/users/${userId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      
+      console.log('✅ getUserById SUCCESS');
+      console.log('📊 Response data:', response.data);
+      
       return response.data;
     } catch (error) {
+      console.error('❌ getUserById error:', error.response?.data || error.message);
       throw error;
     }
   },

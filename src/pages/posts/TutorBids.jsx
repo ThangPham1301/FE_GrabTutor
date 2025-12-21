@@ -9,6 +9,7 @@ import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
 import notificationApi from '../../api/notificationApi';
 import chatApi from '../../api/chatApi';
+import userApi from '../../api/userApi';
 
 export default function TutorBids() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function TutorBids() {
   const [error, setError] = useState(null);
   const [acceptedBidId, setAcceptedBidId] = useState(null);
   const [processingBidId, setProcessingBidId] = useState(null);
+  const [myInfo, setMyInfo] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'USER') {
@@ -29,7 +31,19 @@ export default function TutorBids() {
     }
     fetchTutorBids();
     fetchPostDetail();
+    fetchMyInfo(); // Fetch userStatus
   }, [postId, user]);
+
+  const fetchMyInfo = async () => {
+    try {
+      const response = await userApi.getMyInfo();
+      const myInfoData = response.data || response;
+      setMyInfo(myInfoData);
+      console.log('📌 userStatus from myInfo:', myInfoData.userStatus);
+    } catch (error) {
+      console.error('Error fetching myInfo:', error);
+    }
+  };
 
   const fetchPostDetail = async () => {
     try {
@@ -74,6 +88,12 @@ export default function TutorBids() {
 
   // ✅ ACCEPT BID + SEND NOTIFICATIONS
   const handleAcceptBid = async (bidId) => {
+    // ✅ Check if user is PENDING using myInfo
+    if (myInfo?.userStatus === 'PENDING') {
+      alert('❌ You have not been verified by Admin yet. Please contact Admin to activate your account.');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to accept this bid? Other bids will be deactivated.')) return;
 
     try {

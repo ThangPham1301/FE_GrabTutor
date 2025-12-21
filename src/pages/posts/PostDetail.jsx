@@ -368,15 +368,22 @@ export default function PostDetail() {
             {post.imageUrl && (
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden group">
                 <div className="relative h-96 bg-gray-100 overflow-hidden cursor-pointer">
+                  {/* Blurred Background Image */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center blur-xl"
+                    style={{ backgroundImage: `url(${post.imageUrl})` }}
+                  />
+                  
+                  {/* Blurred Image Layer */}
                   <img
                     src={post.imageUrl}
                     alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover blur-md group-hover:blur-sm transition-all duration-300 relative z-10"
                     onClick={() => setShowImageModal(true)}
                   />
                   
                   {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center z-20">
                     <button
                       onClick={() => setShowImageModal(true)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-[#03ccba] px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-lg"

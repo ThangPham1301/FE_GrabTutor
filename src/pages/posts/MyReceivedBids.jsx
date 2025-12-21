@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import postApi from '../../api/postApi';
 import notificationApi from '../../api/notificationApi';
 import chatApi from '../../api/chatApi';
+import userApi from '../../api/userApi';
 import Navbar from '../../components/Navbar';
 
 const DEBUG = true;
@@ -27,6 +28,7 @@ export default function MyReceivedBids() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all, pending, accepted
+  const [myInfo, setMyInfo] = useState(null);
 
   // Effects
   useEffect(() => {
@@ -35,7 +37,20 @@ export default function MyReceivedBids() {
       return;
     }
     fetchMyPosts();
+    fetchMyInfo();
   }, [user, navigate]);
+
+  // Fetch myInfo to get userStatus
+  const fetchMyInfo = async () => {
+    try {
+      const response = await userApi.getMyInfo();
+      const myInfoData = response.data || response;
+      setMyInfo(myInfoData);
+      console.log('📌 userStatus from myInfo:', myInfoData.userStatus);
+    } catch (error) {
+      console.error('Error fetching myInfo:', error);
+    }
+  };
 
   // API Calls
   const fetchMyPosts = async () => {
@@ -108,6 +123,11 @@ export default function MyReceivedBids() {
 
   // Handlers
   const handleAcceptBid = async (postId, bidId) => {
+    // ✅ Check if user is PENDING using myInfo
+    if (myInfo?.userStatus === 'PENDING') {
+      alert('❌ You have not been verified by Admin yet. Please contact Admin to activate your account.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to accept this bid? Other bids will be deactivated.')) return;
 
     try {
