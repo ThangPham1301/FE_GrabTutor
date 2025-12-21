@@ -82,7 +82,7 @@ export default function PaymentProcess() {
             onClick={() => navigate('/wallet/recharge')}
             className="flex-1 px-6 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors"
           >
-            Hủy
+            Cancel
           </button>
           <button
             onClick={handlePayment}
@@ -95,7 +95,7 @@ export default function PaymentProcess() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Đang xử lý...
+                Processing...
               </div>
             ) : (
               'Tiếp tục thanh toán'
@@ -105,8 +105,8 @@ export default function PaymentProcess() {
 
         {/* Security note */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Thông tin thanh toán của bạn được bảo mật.</p>
-          <p>Bạn sẽ được chuyển đến trang thanh toán an toàn của VNPay.</p>
+          <p>Your payment information is secure.</p>
+          <p>You will be redirected to VNPay's secure payment page.</p>
         </div>
       </div>
     </div>

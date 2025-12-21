@@ -77,7 +77,7 @@ export default function EditPost() {
       // Nếu backend không trả về user info, bỏ qua kiểm tra quyền
       if (postUserId && postUserId !== user.userId) {
         console.log('❌ Không có quyền - User IDs không match');
-        alert('Bạn không có quyền chỉnh sửa bài đăng này!');
+        alert('You don\'t have permission to edit this post!');
         navigate('/posts/inventory');
         return;
       }
@@ -96,7 +96,7 @@ export default function EditPost() {
       }
     } catch (err) {
       console.error('Error fetching post:', err);
-      alert('Không thể tải bài đăng!');
+      alert('Unable to load post!');
       navigate('/posts/inventory');
     } finally {
       setLoading(false);
@@ -138,7 +138,7 @@ export default function EditPost() {
     e.preventDefault();
     
     if (!formData.title.trim()) {
-      alert('Vui lòng nhập tiêu đề bài đăng');
+      alert('Please enter post title');
       return;
     }
     if (!formData.subjectId) {
@@ -146,14 +146,14 @@ export default function EditPost() {
       return;
     }
     if (!formData.description.trim()) {
-      alert('Vui lòng nhập mô tả');
+      alert('Please enter description');
       return;
     }
 
     setLoading(true);
     try {
       await postApi.updatePost(id, formData);
-      alert('Cập nhật bài đăng thành công!');
+      alert('Post updated successfully!');
       navigate('/posts/inventory');
     } catch (err) {
       console.error('Error:', err);
@@ -190,7 +190,7 @@ export default function EditPost() {
                 value={formData.title}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba]"
-                placeholder="Nhập tiêu đề"
+                placeholder="Enter title"
                 required
               />
             </div>
@@ -225,7 +225,7 @@ export default function EditPost() {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mô tả <span className="text-red-500">*</span>
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 name="description"
@@ -233,7 +233,7 @@ export default function EditPost() {
                 onChange={handleInputChange}
                 rows={5}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba]"
-                placeholder="Mô tả chi tiết bài đăng"
+                placeholder="Detailed post description"
                 required
               />
             </div>

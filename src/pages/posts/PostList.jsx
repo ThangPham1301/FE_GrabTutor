@@ -13,7 +13,7 @@ export default function PostList() {
       subject: "Toán",
       level: "Lớp 12",
       location: "Đà Nẵng",
-      status: "Đang tìm",
+      status: "Searching",
       schedule: "3 buổi/tuần",
       fee: "200,000 VNĐ/giờ",
       createdAt: "2024-03-15",
@@ -29,7 +29,7 @@ export default function PostList() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Bài đăng của bạn</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Posts</h1>
               <p className="text-gray-600">Quản lý và theo dõi các bài đăng tìm gia sư</p>
             </div>
             <button
@@ -63,7 +63,7 @@ export default function PostList() {
             </select>
             <select className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent appearance-none bg-white">
               <option value="">Tất cả trạng thái</option>
-              <option value="active">Đang tìm</option>
+              <option value="active">Searching</option>
               <option value="completed">Đã tìm được</option>
             </select>
           </div>
@@ -79,7 +79,7 @@ export default function PostList() {
                     {post.title}
                   </h2>
                   <span className={`px-3 py-1 rounded-full text-xs ${
-                    post.status === 'Đang tìm' 
+                    post.status === 'Searching' 
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
@@ -116,7 +116,7 @@ export default function PostList() {
                     </button>
                     <button 
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Xóa"
+                      title="Delete"
                     >
                       <FaTrash />
                     </button>

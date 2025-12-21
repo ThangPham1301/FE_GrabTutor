@@ -38,23 +38,23 @@ export default function StudentDetailsForm() {
 
     // Validation
     if (!formData.studentName.trim()) {
-      setError('Vui lòng nhập tên');
+      setError('Please enter your name');
       return;
     }
     if (!formData.birthday) {
-      setError('Vui lòng chọn ngày sinh');
+      setError('Please select your date of birth');
       return;
     }
     if (!formData.phone.trim() || formData.phone.length < 10) {
-      setError('Vui lòng nhập số điện thoại hợp lệ');
+      setError('Please enter a valid phone number');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError('Passwords do not match');
       return;
     }
     if (formData.password.length < 5) {
-      setError('Mật khẩu phải có ít nhất 5 ký tự');
+      setError('Password must be at least 5 characters');
       return;
     }
 
@@ -70,24 +70,24 @@ export default function StudentDetailsForm() {
         phoneNumber: formData.phone
       };
 
-      console.log('userData gửi đi:', userData);
+      console.log('userData being sent:', userData);
       
-      // ✅ Gọi API đăng ký
+      // ✅ Call registration API
       await authApi.registerStudent(userData);
 
       localStorage.removeItem('signupEmail');
       
-      // ✅ Hiển thị thông báo thành công
-      alert('✅ Đăng ký thành công! Chuyển hướng về trang chủ...');
+      // ✅ Display success notification
+      alert('✅ Registration successful! Redirecting to home page...');
       
-      // ✅ Chuyển hướng sang trang HOME thay vì login-role
+      // ✅ Redirect to HOME page instead of login-role
       setTimeout(() => {
         navigate('/');
       }, 500);
       
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || 'Không thể đăng ký');
+      setError(err.response?.data?.message || 'Unable to register');
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export default function StudentDetailsForm() {
       {/* Main content */}
       <div className="flex-1 flex justify-center items-center px-4">
         <div className="bg-white rounded-xl shadow-md p-8 max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-6">Thông tin chi tiết</h2>
+          <h2 className="text-2xl font-bold mb-6">Personal Details</h2>
 
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
@@ -127,7 +127,7 @@ export default function StudentDetailsForm() {
             {/* Full Name */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Tên đầy đủ
+                Full Name
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaUser /></span>
@@ -160,7 +160,7 @@ export default function StudentDetailsForm() {
             {/* Birthday */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Ngày sinh
+                Date of Birth
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaBirthdayCake /></span>
@@ -177,7 +177,7 @@ export default function StudentDetailsForm() {
             {/* Phone */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Số điện thoại
+                Phone Number
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaPhone /></span>
@@ -196,7 +196,7 @@ export default function StudentDetailsForm() {
             {/* Password */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Mật khẩu
+                Password
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaLock /></span>
@@ -214,7 +214,7 @@ export default function StudentDetailsForm() {
             {/* Confirm Password */}
             <div className="relative">
               <label className="absolute -top-2.5 left-2 bg-white px-2 text-sm font-medium text-gray-600">
-                Xác nhận mật khẩu
+                Confirm Password
               </label>
               <div className="flex items-center border border-gray-300 rounded-lg focus-within:border-[#03ccba] focus-within:ring-1 focus-within:ring-[#03ccba]">
                 <span className="pl-4 text-gray-500"><FaLock /></span>
@@ -235,7 +235,7 @@ export default function StudentDetailsForm() {
               disabled={loading}
               className="w-full bg-[#03ccba] text-white py-4 rounded-lg hover:bg-[#02b5a5] text-lg font-medium transition-colors duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+              {loading ? 'Registering...' : 'Sign Up'}
             </button>
           </form>
         </div>
@@ -246,7 +246,7 @@ export default function StudentDetailsForm() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-8">
             <p className="text-gray-600">
-              Cần giúp đỡ? Gọi cho chúng tôi{' '}
+            Need help? Call us{' '}
               <a href="tel:+442037736020" className="text-[#03ccba] font-medium">
                 +44 (0) 203 773 6020
               </a>
@@ -256,7 +256,7 @@ export default function StudentDetailsForm() {
             onClick={() => navigate('/login-role')}
             className="bg-[#ebded5] px-8 py-3 rounded-lg hover:bg-[#03ccba] hover:text-white transition-all duration-300 font-medium"
           >
-            Đăng nhập
+            Login
           </button>
         </div>
       </div>

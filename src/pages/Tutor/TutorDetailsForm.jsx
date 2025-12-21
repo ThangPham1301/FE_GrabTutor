@@ -59,31 +59,31 @@ export default function TutorDetailsForm() {
 
     // Validation
     if (!formData.fullName.trim()) {
-      setError('Vui lòng nhập tên');
+      setError('Please enter your name');
       return;
     }
     if (!formData.dob) {
-      setError('Vui lòng chọn ngày sinh');
+      setError('Please select your date of birth');
       return;
     }
     if (!formData.phoneNumber.trim() || formData.phoneNumber.length < 10) {
-      setError('Vui lòng nhập số điện thoại hợp lệ');
+      setError('Please enter a valid phone number');
       return;
     }
     if (!formData.password.trim() || formData.password.length < 5) {
-      setError('Mật khẩu phải có ít nhất 5 ký tự');
+      setError('Password must be at least 5 characters');
       return;
     }
     if (!formData.university.trim()) {
-      setError('Vui lòng nhập trường đại học');
+      setError('Please enter your university');
       return;
     }
     if (!formData.highestAcademicDegree.trim()) {
-      setError('Vui lòng chọn bằng cấp');
+      setError('Please select a degree');
       return;
     }
     if (!formData.major.trim()) {
-      setError('Vui lòng chọn chuyên ngành');
+      setError('Please select a major');
       return;
     }
 
@@ -104,18 +104,18 @@ export default function TutorDetailsForm() {
         role: 'TUTOR'
       };
 
-      console.log('tutorData gửi đi:', tutorData);
+      console.log('tutorData being sent:', tutorData);
       
-      // ✅ Gọi API đăng ký
+      // ✅ Call registration API
       await userApi.addTutor(tutorData);
 
       localStorage.removeItem('signupEmail');
       
-      // ✅ Hiển thị thông báo thành công
-      alert('✅ Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.');
+      // ✅ Display success notification
+      alert('✅ Registration successful! Please log in to continue.');
       
-      // ✅ Chuyển hướng sang trang LOGIN (không phải login-role)
-      // Lưu email vào localStorage để pre-fill form login
+      // ✅ Redirect to LOGIN page (not login-role)
+      // Save email to localStorage to pre-fill login form
       localStorage.setItem('loginEmail', formData.email);
       
       setTimeout(() => {
@@ -124,7 +124,7 @@ export default function TutorDetailsForm() {
       
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || 'Không thể đăng ký');
+      setError(err.response?.data?.message || 'Unable to register');
     } finally {
       setLoading(false);
     }

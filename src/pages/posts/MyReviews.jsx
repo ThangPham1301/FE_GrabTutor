@@ -65,7 +65,7 @@ export default function MyReviews() {
       setReviews(items);
       setTotalPages(totalPagesValue);
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể tải reviews');
+      setError(err.response?.data?.message || 'Unable to load reviews');
     } finally {
       setLoading(false);
     }
@@ -113,13 +113,13 @@ export default function MyReviews() {
       });
 
       console.log('✅ Review updated successfully');
-      alert('✅ Cập nhật review thành công!');
+      alert('✅ Review updated successfully!');
       
       handleCloseEdit();
       await fetchMyReviews();
     } catch (err) {
       console.error('❌ Error updating review:', err);
-      setEditError(err.response?.data?.message || err.message || 'Lỗi khi cập nhật review');
+      setEditError(err.response?.data?.message || err.message || 'Error updating review');
     } finally {
       setEditLoading(false);
     }
@@ -145,7 +145,7 @@ export default function MyReviews() {
       await reviewApi.deleteReview(deletingReviewId);
 
       console.log('✅ Review deleted successfully');
-      alert('✅ Xóa review thành công!');
+      alert('✅ Review deleted successfully!');
       
       setShowDeleteConfirm(false);
       setDeletingReviewId(null);
@@ -153,7 +153,7 @@ export default function MyReviews() {
       await fetchMyReviews();
     } catch (err) {
       console.error('❌ Error deleting review:', err);
-      alert('❌ Lỗi: ' + (err.response?.data?.message || err.message));
+      alert('❌ Error: ' + (err.response?.data?.message || err.message));
     } finally {
       setDeleteLoading(false);
     }
@@ -175,7 +175,7 @@ export default function MyReviews() {
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 py-12 text-center">
           <FaSpinner className="animate-spin text-5xl text-[#03ccba] mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">Đang tải reviews...</p>
+          <p className="text-gray-600 text-lg">Loading reviews...</p>
         </div>
       </div>
     );
@@ -196,7 +196,7 @@ export default function MyReviews() {
           </button>
           <h1 className="text-4xl font-bold mb-2">⭐ My Reviews</h1>
           <p className="text-teal-100">
-            Quản lý các reviews bạn đã gửi cho gia sư
+            Manage the reviews you've sent to tutors
           </p>
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function MyReviews() {
             <FaBox className="text-6xl text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 text-lg mb-2">Chưa có reviews nào</p>
             <p className="text-gray-500 text-sm">
-              Khi bạn review gia sư, nó sẽ xuất hiện ở đây
+              When you review a tutor, it will appear here
             </p>
             <button
               onClick={() => navigate('/posts')}
@@ -415,7 +415,7 @@ export default function MyReviews() {
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Chia sẻ trải nghiệm của bạn..."
+                placeholder="Share your experience..."
                 rows={3}
                 maxLength={500}
                 disabled={editLoading}
@@ -445,12 +445,12 @@ export default function MyReviews() {
                 {editLoading ? (
                   <>
                     <FaSpinner className="animate-spin" size={16} />
-                    Đang lưu...
+                    Saving...
                   </>
                 ) : (
                   <>
                     <FaStar size={16} />
-                    Cập Nhật
+                    Update
                   </>
                 )}
               </button>
@@ -463,10 +463,10 @@ export default function MyReviews() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">🗑️ Xóa Review</h2>
+            <h2 className="text-2xl font-bold text-red-600 mb-4">🗑️ Delete Review</h2>
             
             <p className="text-gray-700 mb-6">
-              Bạn có chắc chắn muốn xóa review này? Hành động này không thể hoàn tác.
+              Are you sure you want to delete this review? This action cannot be undone.
             </p>
 
             <div className="flex gap-2">
@@ -488,12 +488,12 @@ export default function MyReviews() {
                 {deleteLoading ? (
                   <>
                     <FaSpinner className="animate-spin" size={16} />
-                    Đang xóa...
+                    Deleting...
                   </>
                 ) : (
                   <>
                     <FaTrash size={16} />
-                    Xóa
+                    Delete
                   </>
                 )}
               </button>

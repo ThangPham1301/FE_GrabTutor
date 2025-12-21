@@ -27,7 +27,7 @@ export default function PostForm() {
     file: null
   });
 
-  // Lấy danh sách môn học và bài đăng
+  // Fetch list of subjects and posts
   useEffect(() => {
     fetchSubjects();
     fetchPosts();
@@ -104,30 +104,30 @@ export default function PostForm() {
     
     // Validation
     if (!formData.title.trim()) {
-      alert('Vui lòng nhập tiêu đề bài đăng');
+      alert('Please enter post title');
       return;
     }
     if (!formData.subjectId) {
-      alert('Vui lòng chọn môn học');
+      alert('Please select a subject');
       return;
     }
     if (!formData.level) {
-      alert('Vui lòng chọn trình độ');
+      alert('Please select a level');
       return;
     }
     if (!formData.location.trim()) {
-      alert('Vui lòng nhập địa điểm');
+      alert('Please enter a location');
       return;
     }
     if (!formData.fee) {
-      alert('Vui lòng nhập học phí');
+      alert('Please enter tuition fee');
       return;
     }
 
     setLoading(true);
     try {
       await postApi.createPost(formData);
-      alert('Tạo bài đăng thành công!');
+      alert('Post created successfully!');
       setShowModal(false);
       
       // Reset form
@@ -149,7 +149,7 @@ export default function PostForm() {
       fetchPosts();
     } catch (err) {
       console.error('Error:', err);
-      alert('Lỗi: ' + (err.response?.data?.message || 'Không thể tạo bài đăng'));
+      alert('Error: ' + (err.response?.data?.message || 'Unable to create post'));
     } finally {
       setLoading(false);
     }
@@ -169,12 +169,12 @@ export default function PostForm() {
       <div className="bg-white shadow mb-6">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Quản lý bài đăng</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Manage Posts</h1>
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 px-6 py-2 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] transition-colors"
             >
-              <FaPlus /> Tạo bài đăng mới
+              <FaPlus /> Create New Post
             </button>
           </div>
         </div>
@@ -202,11 +202,11 @@ export default function PostForm() {
                   </h3>
                   
                   <div className="space-y-2 text-sm text-gray-600 mb-4">
-                    <p><strong>Môn:</strong> {post.subject?.name || 'N/A'}</p>
-                    <p><strong>Trình độ:</strong> {post.level || 'N/A'}</p>
-                    <p><strong>Địa điểm:</strong> {post.location}</p>
-                    <p><strong>Học phí:</strong> {post.fee?.toLocaleString()} VND/giờ</p>
-                    <p><strong>Lịch:</strong> {post.schedule || 'N/A'}</p>
+                    <p><strong>Subject:</strong> {post.subject?.name || 'N/A'}</p>
+                    <p><strong>Level:</strong> {post.level || 'N/A'}</p>
+                    <p><strong>Location:</strong> {post.location}</p>
+                    <p><strong>Fee:</strong> {post.fee?.toLocaleString()} VND/hour</p>
+                    <p><strong>Schedule:</strong> {post.schedule || 'N/A'}</p>
                   </div>
                   
                   <p className="text-gray-700 text-sm line-clamp-3 mb-4">
@@ -215,10 +215,10 @@ export default function PostForm() {
                   
                   <div className="flex gap-2">
                     <button className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
-                      Chi tiết
+                      Details
                     </button>
                     <button className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
-                      Sửa
+                      Edit
                     </button>
                   </div>
                 </div>
@@ -227,7 +227,7 @@ export default function PostForm() {
           </div>
         ) : (
           <div className="text-center py-12 bg-white rounded-lg">
-            <p className="text-gray-500 text-lg">Không có bài đăng nào</p>
+            <p className="text-gray-500 text-lg">No posts yet</p>
           </div>
         )}
 
@@ -239,17 +239,17 @@ export default function PostForm() {
               disabled={pageNo === 0}
               className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400"
             >
-              ← Trang trước
+              ← Previous Page
             </button>
             <span className="px-4 py-2 font-semibold">
-              Trang {pageNo + 1} / {totalPages}
+              Page {pageNo + 1} / {totalPages}
             </span>
             <button
               onClick={handleNextPage}
               disabled={pageNo >= totalPages - 1}
               className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600"
             >
-              Trang sau →
+              Next Page →
             </button>
           </div>
         )}
@@ -261,7 +261,7 @@ export default function PostForm() {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold">Tạo bài đăng mới</h2>
+              <h2 className="text-2xl font-bold">Create New Post</h2>
               <button
                 onClick={() => {
                   setShowModal(false);
@@ -278,7 +278,7 @@ export default function PostForm() {
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tiêu đề <span className="text-red-500">*</span>
+                  Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -286,7 +286,7 @@ export default function PostForm() {
                   value={formData.title}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
-                  placeholder="Nhập tiêu đề"
+                  placeholder="Enter title"
                   required
                 />
               </div>
@@ -295,7 +295,7 @@ export default function PostForm() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Môn học <span className="text-red-500">*</span>
+                    Subject <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="subjectId"
@@ -304,7 +304,7 @@ export default function PostForm() {
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
                     required
                   >
-                    <option value="">-- Chọn môn --</option>
+                    <option value="">-- Select Subject --</option>
                     {subjects.map(subject => (
                       <option key={subject.id} value={subject.id}>
                         {subject.name}
@@ -314,7 +314,7 @@ export default function PostForm() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Trình độ <span className="text-red-500">*</span>
+                    Level <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="level"
@@ -323,10 +323,10 @@ export default function PostForm() {
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
                     required
                   >
-                    <option value="">-- Chọn trình độ --</option>
-                    <option value="BEGINNER">Cơ bản</option>
-                    <option value="INTERMEDIATE">Trung bình</option>
-                    <option value="ADVANCED">Nâng cao</option>
+                    <option value="">-- Select Level --</option>
+                    <option value="BEGINNER">Beginner</option>
+                    <option value="INTERMEDIATE">Intermediate</option>
+                    <option value="ADVANCED">Advanced</option>
                   </select>
                 </div>
               </div>
@@ -334,7 +334,7 @@ export default function PostForm() {
               {/* Location */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Địa điểm <span className="text-red-500">*</span>
+                  Location <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -342,7 +342,7 @@ export default function PostForm() {
                   value={formData.location}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
-                  placeholder="Nhập địa điểm"
+                  placeholder="Enter location"
                   required
                 />
               </div>
@@ -350,7 +350,7 @@ export default function PostForm() {
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mô tả
+                  Description
                 </label>
                 <textarea
                   name="description"
@@ -358,14 +358,14 @@ export default function PostForm() {
                   onChange={handleInputChange}
                   rows={3}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
-                  placeholder="Mô tả chi tiết bài đăng"
+                  placeholder="Enter detailed post description"
                 />
               </div>
 
               {/* Requirements */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Yêu cầu gia sư
+                  Tutor Requirements
                 </label>
                 <textarea
                   name="requirements"
@@ -373,7 +373,7 @@ export default function PostForm() {
                   onChange={handleInputChange}
                   rows={2}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
-                  placeholder="Yêu cầu với gia sư"
+                  placeholder="Enter requirements for tutors"
                 />
               </div>
 
@@ -381,7 +381,7 @@ export default function PostForm() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lịch học
+                    Schedule
                   </label>
                   <input
                     type="text"
@@ -389,12 +389,12 @@ export default function PostForm() {
                     value={formData.schedule}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
-                    placeholder="VD: Thứ 2, 4, 6"
+                    placeholder="E.g: Mon, Wed, Fri"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Học phí (VND/giờ) <span className="text-red-500">*</span>
+                    Tuition Fee (VND/hour) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -402,7 +402,7 @@ export default function PostForm() {
                     value={formData.fee}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
-                    placeholder="Nhập học phí"
+                    placeholder="Enter tuition fee"
                     required
                   />
                 </div>
@@ -411,7 +411,7 @@ export default function PostForm() {
               {/* Upload Image */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hình ảnh
+                  Image
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-[#03ccba] transition-colors">
                   {imagePreview ? (
@@ -432,7 +432,7 @@ export default function PostForm() {
                   ) : (
                     <label className="cursor-pointer text-center block">
                       <FaUpload className="text-3xl text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600 text-sm">Nhấp để chọn ảnh</p>
+                      <p className="text-gray-600 text-sm">Click to select image</p></p>
                       <input
                         type="file"
                         accept="image/*"
@@ -454,14 +454,14 @@ export default function PostForm() {
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
                   className="flex-1 px-4 py-2 bg-[#03ccba] text-white rounded-lg hover:bg-[#02b5a5] disabled:opacity-50"
                 >
-                  {loading ? 'Đang tạo...' : 'Tạo bài đăng'}
+                  {loading ? 'Creating...' : 'Create Post'}
                 </button>
               </div>
             </form>

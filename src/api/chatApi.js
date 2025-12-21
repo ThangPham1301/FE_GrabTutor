@@ -333,18 +333,46 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await response.json();
-    const messages = data?.data?.messages || data?.messages || [];
+    if (DEBUG) console.log('📨 [API] Raw response from getMessages:', data);
     
-    // Return messages without transformation - keep backend field names
-    return messages.map(msg => ({
-      id: msg.id,
-      userId: msg.userId,
-      email: msg.email,
-      message: msg.message,  // Keep as "message", not "content"
-      fileUrl: msg.fileUrl,
-      fileName: msg.fileName,
-      createdAt: msg.createdAt,
-    }));
+    const messages = data?.data?.messages || data?.messages || [];
+    if (DEBUG) console.log('📨 [API] Messages array:', messages);
+    
+    // ✅ Map messages including isDeleted field (backend uses 'deleted' or 'isDeleted')
+    const mappedMessages = messages.map(msg => {
+      // Backend returns 'deleted' field, not 'isDeleted'
+      const isMessageDeleted = msg.deleted === true || msg.deleted === 'true' || msg.isDeleted === true || msg.isDeleted === 'true' || msg.message === '(tin nhắn đã gỡ)';
+      
+      if (DEBUG && isMessageDeleted) {
+        console.log('🗑️ [API] Found deleted message:', {
+          id: msg.id,
+          backend_deleted: msg.deleted,
+          backend_isDeleted: msg.isDeleted,
+          original_message: msg.message
+        });
+      }
+      
+      return {
+        id: msg.id,
+        userId: msg.userId,
+        email: msg.email,
+        message: isMessageDeleted ? '(tin nhắn đã gỡ)' : msg.message,
+        fileUrl: isMessageDeleted ? null : msg.fileUrl,
+        fileName: isMessageDeleted ? null : msg.fileName,
+        isDeleted: isMessageDeleted,
+        isEdited: msg.isEdited || msg.edited || false,
+        createdAt: msg.createdAt,
+        updatedAt: msg.updatedAt
+      };
+    });
+    
+    if (DEBUG) {
+      console.log('📨 [API] Mapped messages:', mappedMessages);
+      console.log('🗑️ [API] Messages with isDeleted=true:', mappedMessages.filter(m => m.isDeleted));
+      console.log('🗑️ [API] Messages with "(tin nhắn đã gỡ)" content:', mappedMessages.filter(m => m.message === '(tin nhắn đã gỡ)'));
+    }
+    
+    return mappedMessages;
   } catch (error) {
     console.error('getMessages ERROR:', error);
     return [];
@@ -465,9 +493,8 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
       const token = localStorage.getItem('token');
       if (DEBUG) console.log('🗑️ [API] Deleting message:', messageId);
 
-      // ✅ FIX: Backend endpoint format
       const response = await fetch(
-        `${BASE_URL}/grabtutor/room/message?messageId=${messageId}`,  // ← Đúng format
+        `${BASE_URL}/grabtutor/room/message?messageId=${messageId}`,
         {
           method: 'DELETE',
           headers: {
@@ -478,14 +505,55 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
       );
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ [API] Server response:', errorText);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      if (DEBUG) console.log('✅ [API] Message deleted');
+      if (DEBUG) {
+        console.log('✅ [API] DELETE response:', data);
+        console.log('📊 [API] Response structure:');
+        console.log('   - data.message:', data?.message);
+        console.log('   - data.data:', data?.data);
+        console.log('   - Full data:', JSON.stringify(data, null, 2));
+      }
       return data;
     } catch (error) {
       console.error('❌ [API] Error deleting message:', error);
+      throw error;
+    }
+  },
+
+  // ✅ UPDATE MESSAGE
+  updateMessage: async (messageId, newContent) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (DEBUG) console.log('✏️ [API] Updating message:', messageId, 'Content:', newContent);
+
+      const response = await fetch(
+        `${BASE_URL}/grabtutor/room/message`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ messageId, content: newContent })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [API] Server response:', errorText);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      if (DEBUG) console.log('✅ [API] Message updated successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ [API] Error updating message:', error);
       throw error;
     }
   },

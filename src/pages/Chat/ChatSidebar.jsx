@@ -68,7 +68,7 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
           
           if (DEBUG) console.log(`📝 Post ${conv.postId}: ${titles[conv.postId]}`);
         } catch (err) {
-          console.error(`Error fetching post ${conv.postId}:`, err);
+          // Silently handle 404 post not found errors (post may have been deleted)
           titles[conv.postId] = 'Unknown Post';
         }
       }

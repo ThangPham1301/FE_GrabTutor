@@ -13,7 +13,7 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
     e.preventDefault();
     
     if (stars === 0) {
-      setError('Vui lòng chọn số sao');
+      setError('Please select a rating');
       return;
     }
 
@@ -43,7 +43,7 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
       onClose();
     } catch (err) {
       console.error('Error details:', err);
-      setError(err.response?.data?.message || err.message || 'Lỗi khi gửi review');
+      setError(err.response?.data?.message || err.message || 'Error sending review');
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">
-            {existingReview ? 'Chỉnh sửa Review' : 'Viết Review'}
+            {existingReview ? 'Edit Review' : 'Write Review'}
           </h2>
           <button
             onClick={onClose}
@@ -76,7 +76,7 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
           {/* Rating */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Đánh giá <span className="text-red-500">*</span>
+              Rating <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-2 justify-center">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -101,7 +101,7 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
             </div>
             {stars > 0 && (
               <p className="text-sm text-gray-600 mt-2 text-center">
-                Bạn đã chọn: <strong>{stars}/5 sao</strong>
+                You selected: <strong>{stars}/5 stars</strong>
               </p>
             )}
           </div>
@@ -109,18 +109,18 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bình luận (tùy chọn)
+              Comment (Optional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Chia sẻ trải nghiệm của bạn..."
+              placeholder="Share your experience..."
               rows={4}
               maxLength={500}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent resize-none"
             />
             <p className="text-xs text-gray-500 mt-1 text-right">
-              {description.length}/500 ký tự
+              {description.length}/500 characters
             </p>
           </div>
 
@@ -132,7 +132,7 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
               disabled={loading}
               className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
             >
-              Hủy
+              Cancel
             </button>
             <button
               type="submit"
@@ -142,12 +142,12 @@ export default function ReviewForm({ postId, onClose, onSuccess, existingReview 
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                  Đang gửi...
+                  Sending...
                 </span>
               ) : existingReview ? (
-                'Cập nhật'
+                'Update'
               ) : (
-                'Gửi Review'
+                'Send Review'
               )}
             </button>
           </div>

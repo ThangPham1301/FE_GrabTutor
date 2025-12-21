@@ -48,6 +48,11 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -71,9 +76,19 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
         
         // ✅ Lấy message history từ server
         const historyMessages = await chatApi.getMessages(conversation.id, 0, 100);
+        if (DEBUG) {
+          console.log('📩 [Init] Loaded message history:', historyMessages.length);
+          console.log('📩 [Init] Messages with isDeleted:', historyMessages.filter(m => m.isDeleted));
+          console.log('📩 [Init] All messages:', historyMessages);
+          console.log('📩 [Init] Check if backend returned deleted messages:');
+          historyMessages.forEach(msg => {
+            if (msg.message === '(tin nhắn đã gỡ)' || msg.isDeleted) {
+              console.log(`   ✓ Found deleted message: id=${msg.id}, isDeleted=${msg.isDeleted}, message=${msg.message}`);
+            }
+          });
+        }
         if (historyMessages && historyMessages.length > 0) {
           setMessages(historyMessages);
-          if (DEBUG) console.log('📩 Loaded message history:', historyMessages.length);
         }
         
         // ✅ Join room để receive real-time messages
@@ -100,6 +115,44 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       
       if (msgData?.roomId !== conversation.id) return;
 
+      // ✅ Handle message deleted event (check both 'isDeleted' and 'deleted')
+      if (msgData?.type === 'MESSAGE_DELETED' || msgData?.isDeleted || msgData?.deleted) {
+        if (DEBUG) console.log('🗑️ [WS] Message deleted:', msgData.id, { isDeleted: msgData.isDeleted, deleted: msgData.deleted });
+        
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === msgData.id
+              ? {
+                  ...msg,
+                  message: '(tin nhắn đã gỡ)',
+                  fileUrl: null,
+                  fileName: null,
+                  isDeleted: true
+                }
+              : msg
+          )
+        );
+        return;
+      }
+
+      // ✅ Handle message updated event
+      if (msgData?.type === 'MESSAGE_UPDATED') {
+        if (DEBUG) console.log('✏️ [WS] Message updated:', msgData.id);
+        
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === msgData.id
+              ? {
+                  ...msg,
+                  message: msgData.message,
+                  isEdited: true
+                }
+              : msg
+          )
+        );
+        return;
+      }
+
       if (DEBUG) console.log('✅ [WS] New message:', msgData);
 
       setMessages(prev => {
@@ -113,6 +166,8 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
           message: msgData.message || msgData.content,
           fileName: msgData.fileName,
           fileUrl: msgData.fileUrl,
+          isDeleted: msgData.isDeleted || false,
+          isEdited: msgData.isEdited || false,
           createdAt: msgData.createdAt || new Date().toISOString()
         };
         
@@ -357,6 +412,98 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
     const reader = new FileReader();
     reader.onload = () => setFilePreview(reader.result);
     reader.readAsDataURL(file);
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Are you sure you want to delete this message? It will show as "tin nhắn đã gỡ" for both users.')) {
+      return;
+    }
+
+    try {
+      setDeletingMessageId(messageId);
+      if (DEBUG) console.log('🗑️ [Frontend] Deleting message:', messageId);
+
+      const deleteResponse = await chatApi.deleteMessage(conversation.id, messageId);
+      if (DEBUG) {
+        console.log('✅ [Frontend] Delete API response:', deleteResponse);
+        console.log('📊 [Frontend] Check if message was deleted on backend:');
+        console.log('   - Has isDeleted in response?', 'isDeleted' in deleteResponse);
+        console.log('   - Response keys:', Object.keys(deleteResponse || {}));
+      }
+
+      // ✅ Update local state to show "tin nhắn đã gỡ"
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                message: '(tin nhắn đã gỡ)',
+                fileUrl: null,
+                fileName: null,
+                isDeleted: true
+              }
+            : msg
+        )
+      );
+
+      if (DEBUG) console.log('✅ [Frontend] Message marked as deleted in local state');
+      alert('✅ Tin nhắn đã bị gỡ');
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      alert('❌ Error deleting message: ' + (err?.message || 'Please try again'));
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
+  const handleEditMessage = (messageId, currentText) => {
+    setEditingMessageId(messageId);
+    setEditingText(currentText);
+    setHoveredMessageId(null);
+  };
+
+  const handleSaveEdit = async (messageId) => {
+    if (!editingText.trim()) {
+      alert('Message cannot be empty');
+      return;
+    }
+
+    if (editingText === messages.find(m => m.id === messageId)?.message) {
+      setEditingMessageId(null);
+      return;
+    }
+
+    try {
+      setEditingSubmitting(true);
+      if (DEBUG) console.log('✏️ Editing message:', messageId);
+
+      // ✅ Call API to update message
+      await chatApi.updateMessage(messageId, editingText);
+
+      // ✅ Update local state
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, message: editingText, isEdited: true }
+            : msg
+        )
+      );
+
+      if (DEBUG) console.log('✅ Message edited successfully');
+      setEditingMessageId(null);
+      setEditingText('');
+      alert('✅ Tin nhắn đã được sửa');
+    } catch (err) {
+      console.error('Error editing message:', err);
+      alert('❌ Lỗi khi sửa: ' + (err?.message || 'Vui lòng thử lại'));
+    } finally {
+      setEditingSubmitting(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
   };
 
   if (!conversation) return null;
@@ -608,9 +755,15 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
             {messages.map((msg, idx) => {
             const isOwnMessage = msg.userId === user?.userId;
             const isImage = msg.fileUrl && isImageFile(msg.fileName);
+            const isEditingThis = editingMessageId === msg.id;
 
             return (
-              <div key={idx} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+              <div 
+                key={idx} 
+                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                onMouseEnter={() => setHoveredMessageId(msg.id)}
+                onMouseLeave={() => setHoveredMessageId(null)}
+              >
                 <div className={`flex gap-2 md:gap-3 max-w-xs md:max-w-sm ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
                   {!isOwnMessage && (
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
@@ -625,47 +778,117 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
                       </p>
                     )}
 
-                    <div className={`px-3 md:px-4 py-2 md:py-3 rounded-2xl text-sm ${
+                    {/* ✅ MESSAGE BUBBLE */}
+                    <div className={`relative px-3 md:px-4 py-2 md:py-3 rounded-2xl text-sm ${
                       isOwnMessage
                         ? 'bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-br-none'
+                        : msg.isDeleted
+                        ? 'bg-gray-200 text-gray-600 italic rounded-bl-none'
                         : 'bg-white text-gray-900 rounded-bl-none shadow-md'
                     }`}>
-                      {msg.message && (
-                        <p className="break-words whitespace-pre-wrap">{msg.message}</p>
-                      )}
-
-                      {isImage && (
-                        <div className="mt-2">
-                          <img
-                            src={msg.fileUrl}
-                            alt={msg.fileName}
-                            className="max-w-xs h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => setSelectedImage(msg.fileUrl)}
+                      {isEditingThis ? (
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            className="flex-1 px-2 py-1 rounded text-gray-900 text-sm border-2 border-[#03ccba]"
+                            autoFocus
                           />
+                          <button
+                            onClick={() => handleSaveEdit(msg.id)}
+                            disabled={editingSubmitting}
+                            className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs font-bold"
+                          >
+                            {editingSubmitting ? <FaSpinner className="animate-spin" size={12} /> : '✓'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs font-bold"
+                          >
+                            ✕
+                          </button>
                         </div>
-                      )}
+                      ) : (
+                        <>
+                          {msg.message && (
+                            <p className="break-words whitespace-pre-wrap">{msg.message}</p>
+                          )}
+                          {msg.isEdited && <span className="text-xs opacity-70 ml-1">(sửa)</span>}
 
-                      {msg.fileUrl && !isImage && (
-                        <a
-                          href={msg.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`text-xs mt-2 flex items-center gap-2 hover:underline ${
-                            isOwnMessage ? 'text-white' : 'text-[#03ccba]'
-                          }`}
-                        >
-                          <FaDownload size={12} />
-                          📎 {msg.fileName || 'Download'}
-                        </a>
+                          {isImage && !msg.isDeleted && (
+                            <div className="mt-2">
+                              <img
+                                src={msg.fileUrl}
+                                alt={msg.fileName}
+                                className="max-w-xs h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => setSelectedImage(msg.fileUrl)}
+                              />
+                            </div>
+                          )}
+
+                          {msg.fileUrl && !isImage && !msg.isDeleted && (
+                            <a
+                              href={msg.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`text-xs mt-2 flex items-center gap-2 hover:underline ${
+                                isOwnMessage ? 'text-white' : 'text-[#03ccba]'
+                              }`}
+                            >
+                              <FaDownload size={12} />
+                              📎 {msg.fileName || 'Download'}
+                            </a>
+                          )}
+                        </>
                       )}
                     </div>
 
-                    <p className="text-xs text-gray-500 mt-1 px-2">
-                      {new Date(msg.createdAt).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                    {/* ✅ ACTION MENU - only for own messages and not deleted */}
+                    {isOwnMessage && !msg.isDeleted && hoveredMessageId === msg.id && !isEditingThis && (
+                      <div className="flex gap-2 mt-1 ml-auto">
+                        <button
+                          onClick={() => handleEditMessage(msg.id, msg.message)}
+                          disabled={editingSubmitting || deletingMessageId === msg.id}
+                          className="relative group/edit"
+                          title="Edit message"
+                        >
+                          <span className="px-2 py-1 bg-white rounded shadow-md hover:bg-blue-50 text-blue-600 text-xs font-bold border border-blue-200 transition-all">
+                            ✏️
+                          </span>
+                          <span className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/edit:opacity-100 transition-opacity">
+                            Sửa
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          disabled={deletingMessageId === msg.id || editingSubmitting}
+                          className="relative group/delete"
+                          title="Delete message"
+                        >
+                          <span className="px-2 py-1 bg-white rounded shadow-md hover:bg-red-50 text-red-600 text-xs font-bold border border-red-200 transition-all flex items-center gap-1">
+                            {deletingMessageId === msg.id ? (
+                              <FaSpinner className="animate-spin" size={12} />
+                            ) : (
+                              '🗑️'
+                            )}
+                          </span>
+                          <span className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/delete:opacity-100 transition-opacity">
+                            Delete
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ✅ TIMESTAMP & EDITED INDICATOR */}
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-gray-500 mt-1 px-2">
+                        {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
                   </div>
 
                   {isOwnMessage && (

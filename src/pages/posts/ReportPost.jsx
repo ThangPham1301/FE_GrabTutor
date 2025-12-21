@@ -3,11 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FaFlag, FaExclamationTriangle } from 'react-icons/fa';
 
 const REPORT_REASONS = [
-  { id: 'spam', label: 'Spam hoặc lừa đảo' },
-  { id: 'inappropriate', label: 'Nội dung không phù hợp' },
-  { id: 'fake', label: 'Thông tin sai sự thật' },
-  { id: 'offensive', label: 'Ngôn từ xúc phạm' },
-  { id: 'other', label: 'Lý do khác' }
+  { id: 'spam', label: 'Spam or Fraud' },
+  { id: 'inappropriate', label: 'Inappropriate Content' },
+  { id: 'fake', label: 'False Information' },
+  { id: 'offensive', label: 'Offensive Language' },
+  { id: 'other', label: 'Other Reason' }
 ];
 
 export default function ReportPost() {
@@ -32,7 +32,7 @@ export default function ReportPost() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <FaFlag className="text-red-500 text-xl" />
-              <h1 className="text-2xl font-bold text-gray-900">Báo cáo bài viết</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Report Post</h1>
             </div>
             <button
               onClick={() => navigate(`/posts/${postId}`)}
@@ -52,8 +52,8 @@ export default function ReportPost() {
             <div className="flex items-center">
               <FaExclamationTriangle className="text-yellow-400 mr-3" />
               <p className="text-sm text-yellow-700">
-                Vui lòng chỉ báo cáo những bài viết vi phạm quy định cộng đồng.
-                Báo cáo sai có thể dẫn đến hạn chế quyền sử dụng của bạn.
+                Please only report posts that violate community guidelines.
+                False reports may result in restrictions on your account access.
               </p>
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function ReportPost() {
             {/* Report reasons */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lý do báo cáo
+                Reason for Report
               </label>
               <div className="space-y-3">
                 {REPORT_REASONS.map((reportReason) => (
@@ -91,13 +91,13 @@ export default function ReportPost() {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mô tả chi tiết
+                Detailed Description
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                placeholder="Vui lòng cung cấp thêm thông tin về vấn đề bạn gặp phải..."
+                placeholder="Please provide additional information about the issue..."
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
                 required
               />
@@ -110,13 +110,13 @@ export default function ReportPost() {
                 onClick={() => navigate(`/posts/${postId}`)}
                 className="flex-1 px-6 py-3 border rounded-lg hover:bg-gray-50"
               >
-                Hủy
+                Cancel
               </button>
               <button
                 type="submit"
                 className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600"
               >
-                Gửi báo cáo
+                Submit Report
               </button>
             </div>
           </form>

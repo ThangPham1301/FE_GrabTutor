@@ -29,7 +29,7 @@ export default function OtpVerification() {
 
       if (response.success) {
         localStorage.removeItem('signupEmail');
-        alert('Đăng ký thành công!');
+        alert('Registration successful!');
         navigate('/login-student');
       }
     } catch (err) {
@@ -45,9 +45,9 @@ export default function OtpVerification() {
       setLoading(true);
       setError(null);
       await authApi.sendRegisterOtp(userData.email);
-      alert('Mã OTP mới đã được gửi!');
+      alert('New OTP code has been sent!');
     } catch (err) {
-      setError('Không thể gửi lại mã OTP');
+      setError('Unable to resend OTP code');
     } finally {
       setLoading(false);
     }
@@ -79,9 +79,9 @@ export default function OtpVerification() {
             <div className="mx-auto w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mb-4">
               <FaEnvelope className="text-2xl text-teal-600" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Nhập mã OTP</h2>
+            <h2 className="text-2xl font-bold mb-2">Enter OTP Code</h2>
             <p className="text-gray-600">
-              Chúng tôi đã gửi mã xác thực đến email{' '}
+              We sent a verification code to your email{' '}}
               <span className="font-medium">{userData.email}</span>
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function OtpVerification() {
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                placeholder="Nhập mã OTP"
+                placeholder="Enter OTP code"
                 className="w-full px-4 py-3 text-center text-2xl tracking-widest border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
                 required
                 maxLength="6"
@@ -110,7 +110,7 @@ export default function OtpVerification() {
               disabled={loading}
               className="w-full bg-[#03ccba] text-white py-3 rounded-lg font-medium hover:bg-[#02b5a5] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {loading ? 'Đang xác thực...' : 'Xác thực'}
+              {loading ? 'Verifying...' : 'Verify'}
             </button>
           </form>
 
@@ -121,7 +121,7 @@ export default function OtpVerification() {
               disabled={loading}
               className="text-[#03ccba] font-medium hover:underline mt-1"
             >
-              Gửi lại mã OTP
+              Resend OTP Code
             </button>
           </div>
         </div>

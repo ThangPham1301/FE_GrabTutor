@@ -8,6 +8,7 @@ import {
 import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
 import reviewApi from '../../api/reviewApi';
+import chatApi from '../../api/chatApi';
 import ReviewFormModal from '../../components/ReviewFormModal';
 import TutorBidModal from '../../components/TutorBidModal';
 
@@ -34,6 +35,9 @@ export default function PostDetail() {
   const [bids, setBids] = useState([]);
   const [hasBidded, setHasBidded] = useState(false);
   const [bidAccepted, setBidAccepted] = useState(false);
+  
+  // Conversation status
+  const [conversation, setConversation] = useState(null);
 
   // ==================== EFFECTS ====================
   
@@ -145,10 +149,36 @@ export default function PostDetail() {
         setHasBidded(true);
         if (myBid.status === 'ACCEPTED') {
           setBidAccepted(true);
+          // Fetch conversation if bid accepted
+          fetchConversation(postId);
         }
       }
     } catch (err) {
       console.error('Error checking my bid:', err);
+    }
+  };
+
+  const fetchConversation = async (postId) => {
+    try {
+      const response = await chatApi.getConversations(0, 50);
+      
+      let conversations = [];
+      if (response?.data && Array.isArray(response.data)) {
+        conversations = response.data;
+      } else if (Array.isArray(response)) {
+        conversations = response;
+      } else if (response?.items) {
+        conversations = response.items;
+      }
+      
+      // Find conversation for this post
+      const conv = conversations.find(c => c.postId === postId);
+      if (conv) {
+        setConversation(conv);
+        if (DEBUG) console.log('💬 Found conversation:', conv);
+      }
+    } catch (err) {
+      console.error('Error fetching conversation:', err);
     }
   };
 
@@ -458,7 +488,7 @@ export default function PostDetail() {
                 )}
 
                 {/* STUDENT - Has bids */}
-                {user && user.role === 'USER' && bids.length > 0 && (
+                {user && user.role === 'USER' && bids.length > 0 && post?.status !== 'CLOSED' && (
                   <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
                     <p className="text-green-800 text-sm font-bold flex items-center gap-2">
                       <FaCheckCircle size={16} /> Question has bids
@@ -472,6 +502,53 @@ export default function PostDetail() {
                     >
                       View {bids.length} Bid{bids.length !== 1 ? 's' : ''}
                     </button>
+                  </div>
+                )}
+
+                {/* STUDENT - Post status is not OPEN */}
+                {user && user.role === 'USER' && post?.status !== 'OPEN' && bids.length > 0 && (
+                  <>
+                    {/* Conversation still active (not confirmed/reported) */}
+                    {conversation && !conversation.confirmed && !conversation.reported && (
+                      <div className="p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                        <p className="text-purple-800 text-sm font-bold flex items-center gap-2">
+                          <FaCheckCircle size={16} className="text-purple-600" /> (Post Accepted)
+                        </p>
+                        <p className="text-purple-700 text-xs mt-2">
+                          You are communicating with your tutor
+                        </p>
+                        <button
+                          onClick={() => navigate('/chat')}
+                          className="mt-3 w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-bold text-sm"
+                        >
+                          📞 Continue Chatting
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Conversation completed (confirmed/reported) */}
+                    {conversation && (conversation.confirmed || conversation.reported) && (
+                      <div className="p-4 bg-teal-50 border-2 border-teal-300 rounded-lg">
+                        <p className="text-teal-800 text-sm font-bold flex items-center gap-2">
+                          <FaCheckCircle size={16} className="text-teal-600" /> (Post Completed)
+                        </p>
+                        <p className="text-teal-700 text-xs mt-2">
+                          This post has been completed
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* STUDENT - No conversation found but post closed (fallback) */}
+                {user && user.role === 'USER' && post?.status !== 'OPEN' && !conversation && (
+                  <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                    <p className="text-blue-800 text-sm font-bold flex items-center gap-2">
+                      <FaCheckCircle size={16} className="text-blue-600" /> (Post Completed)
+                    </p>
+                    <p className="text-blue-700 text-xs mt-2">
+                      This post has been completed
+                    </p>
                   </div>
                 )}
 

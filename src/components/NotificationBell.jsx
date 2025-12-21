@@ -125,29 +125,54 @@ export default function NotificationBell() {
     try {
       setLoading(true);
       
-      if (DEBUG) console.log('📬 Fetching initial notifications...');
+      if (DEBUG) console.log('📬 Fetching initial notifications for userId:', user.userId);
       
       const response = await notificationApi.getNotificationByUserId(user.userId, 0, 10);
       
-      if (DEBUG) console.log('📬 Raw API Response:', response);
+      console.log('🔍 NOTIFICATION API RESPONSE:', response);
+      console.log('📊 Response type:', typeof response);
+      console.log('📋 Response.data:', response?.data);
+      console.log('📋 Response.items:', response?.items);
       
       let notifs = [];
       if (response?.data?.items && Array.isArray(response.data.items)) {
         notifs = response.data.items;
+        if (DEBUG) console.log('✅ Found notifications in response.data.items');
       } else if (response?.data && Array.isArray(response.data)) {
         notifs = response.data;
+        if (DEBUG) console.log('✅ Found notifications in response.data');
+      } else if (response?.items && Array.isArray(response.items)) {
+        notifs = response.items;
+        if (DEBUG) console.log('✅ Found notifications in response.items');
+      } else if (Array.isArray(response)) {
+        notifs = response;
+        if (DEBUG) console.log('✅ Response is array directly');
       }
       
-      if (DEBUG) console.log('📋 Total notifications:', notifs.length);
+      if (DEBUG) console.log('📋 Total notifications found:', notifs.length);
+      console.log('🎯 Notifications:', notifs);
+      
+      // Log refId for each notification
+      notifs.forEach((notif, idx) => {
+        console.log(`📌 Notification ${idx}:`, {
+          id: notif.id,
+          refId: notif.refId,
+          type: notif.type,
+          title: notif.title,
+          content: notif.content
+        });
+      });
       
       setNotifications(notifs);
       
       // ✅ Count unread notifications
       const unread = notifs.filter(n => !n.read).length;
       setUnreadCount(unread);
+      if (DEBUG) console.log('📬 Unread count:', unread);
       
     } catch (error) {
       // ⚠️ Backend API has serialization bug - silently fail and use WebSocket only
+      console.error('❌ ERROR fetching notifications:', error?.response?.data || error?.message);
       if (DEBUG) console.warn('⚠️ REST API unavailable (Backend bug):', error?.response?.data?.message || error?.message);
       if (DEBUG) console.log('📡 Using WebSocket-only mode for notifications');
       setNotifications([]);
@@ -215,16 +240,22 @@ export default function NotificationBell() {
     // ✅ Mark as read FIRST (with proper logic check)
     markAsRead(notification.id);
     
-    // ✅ Parse content for Post ID (UUID format)
-    const postIdRegex = /([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i;
-    const postIdMatch = notification.content?.match(postIdRegex);
-    const postId = postIdMatch ? postIdMatch[0] : null;
+    // ✅ Use refId as priority, fallback to parsing content for Post ID
+    let postId = notification.refId;
+    
+    // ✅ If no refId, parse content for Post ID (UUID format)
+    if (!postId) {
+      const postIdRegex = /([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i;
+      const postIdMatch = notification.content?.match(postIdRegex);
+      postId = postIdMatch ? postIdMatch[0] : null;
+    }
     
     if (DEBUG) {
       console.log('🔍 Navigation analysis:');
       console.log('  - Title:', notification.title);
       console.log('  - Type:', notification.type);
       console.log('  - Content:', notification.content);
+      console.log('  - refId:', notification.refId);
       console.log('  - Detected Post ID:', postId);
       console.log('  - User role:', user?.role);
     }
@@ -253,7 +284,7 @@ export default function NotificationBell() {
         setShowDropdown(false);
         break;
 
-      // ✅ Bid notifications (navigate to post)
+      // ✅ Bid notifications (navigate to post using refId)
       case 'BID ACCEPTED':
       case 'BID REJECTED':
         if (postId) {
@@ -285,11 +316,11 @@ export default function NotificationBell() {
         setShowDropdown(false);
         break;
 
-      // ✅ Post notifications (navigate to post if Post ID detected)
+      // ✅ Post notifications (navigate to post using refId)
       case 'NOTIFICATION':
       default:
         if (postId) {
-          if (DEBUG) console.log('📄 Navigate to post:', postId);
+          if (DEBUG) console.log('📄 Navigate to post detail:', postId);
           navigate(`/posts/${postId}`);
         } else {
           if (DEBUG) console.log('ℹ️ Generic notification - no specific navigation');

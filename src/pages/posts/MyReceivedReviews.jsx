@@ -72,7 +72,7 @@ export default function MyReceivedReviews() {
       setTotalPages(totalPagesValue);
     } catch (err) {
       console.error('❌ Error fetching received reviews:', err);
-      setError(err.response?.data?.message || err.message || 'Không thể tải reviews');
+      setError(err.response?.data?.message || err.message || 'Unable to load reviews');
       setReviews([]);
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ export default function MyReceivedReviews() {
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 py-12 text-center">
           <FaSpinner className="animate-spin text-5xl text-[#03ccba] mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">Đang tải reviews...</p>
+          <p className="text-gray-600 text-lg">Loading reviews...</p>
         </div>
       </div>
     );
@@ -242,7 +242,7 @@ export default function MyReceivedReviews() {
             <FaBox className="text-6xl text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 text-lg mb-2">Chưa có reviews nào</p>
             <p className="text-gray-500 text-sm">
-              Khi học sinh review bạn, nó sẽ xuất hiện ở đây
+              When students review you, it will appear here
             </p>
             <button
               onClick={() => navigate('/posts')}

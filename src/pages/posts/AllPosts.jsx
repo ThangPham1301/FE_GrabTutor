@@ -5,18 +5,18 @@ import { FaSearch } from 'react-icons/fa';
 export default function AllPosts() {
   const navigate = useNavigate();
   
-  // Mock data - sẽ thay thế bằng API call sau
+  // Mock data - will be replaced with API call later
   const posts = [
     {
       id: 1,
-      title: "Cần gia sư Toán lớp 12",
-      subject: "Toán",
-      level: "Lớp 12",
-      location: "Đà Nẵng",
-      status: "Đang tìm",
+      title: "Need Grade 12 Math Tutor",
+      subject: "Math",
+      level: "Grade 12",
+      location: "Da Nang",
+      status: "Looking",
       createdAt: "2024-03-15",
-      fee: "200,000 VNĐ/giờ",
-      description: "Cần gia sư dạy Toán lớp 12, tập trung ôn thi đại học..."
+      fee: "200,000 VND/hour",
+      description: "Need a Grade 12 Math tutor, focused on university entrance exam preparation..."
     },
     {
       id: 2,
@@ -73,7 +73,7 @@ export default function AllPosts() {
       fee: "200,000 VNĐ/giờ",
       description: "Cần gia sư dạy Toán lớp 12, tập trung ôn thi đại học..."
     },
-    // Thêm mock data sau
+    // Add mock data later
   ];
 
   return (
@@ -81,7 +81,7 @@ export default function AllPosts() {
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">Danh sách bài đăng</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Post List</h1>
         </div>
       </div>
 
@@ -92,23 +92,23 @@ export default function AllPosts() {
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder="Tìm kiếm bài đăng..."
+                placeholder="Search posts..."
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#03ccba] focus:border-transparent"
               />
               <FaSearch className="absolute left-3 top-3 text-gray-400" />
             </div>
             <select className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#03ccba] focus:border-transparent">
-              <option value="">Tất cả môn học</option>
-              <option value="math">Toán</option>
-              <option value="physics">Vật lý</option>
-              <option value="chemistry">Hóa học</option>
-              <option value="english">Tiếng Anh</option>
+              <option value="">All Subjects</option>
+              <option value="math">Math</option>
+              <option value="physics">Physics</option>
+              <option value="chemistry">Chemistry</option>
+              <option value="english">English</option>
             </select>
             <select className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#03ccba] focus:border-transparent">
-              <option value="">Tất cả trình độ</option>
-              <option value="primary">Tiểu học</option>
-              <option value="secondary">THCS</option>
-              <option value="high">THPT</option>
+              <option value="">All Levels</option>
+              <option value="primary">Elementary</option>
+              <option value="secondary">Middle School</option>
+              <option value="high">High School</option>
             </select>
           </div>
         </div>

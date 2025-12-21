@@ -8,6 +8,7 @@ import {
 import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
 import notificationApi from '../../api/notificationApi';
+import chatApi from '../../api/chatApi';
 
 export default function TutorBids() {
   const navigate = useNavigate();
@@ -110,10 +111,26 @@ export default function TutorBids() {
         console.warn('⚠️ Failed to send student notification:', notifErr);
       }
 
-      alert('✅ Bid accepted successfully! Notifications sent.');
-      setAcceptedBidId(bidId);
-      
-      await fetchTutorBids();
+      // ✅ GET OR CREATE CONVERSATION + NAVIGATE
+      try {
+        const conversationData = await chatApi.getOrCreateConversation(postId, bidId);
+        const roomId = conversationData?.roomId || conversationData?.id;
+        
+        if (roomId) {
+          console.log('✅ Chatroom created/found:', roomId);
+          alert('✅ Bid accepted successfully! Opening chatroom...');
+          navigate(`/chat?roomId=${roomId}`);
+        } else {
+          alert('✅ Bid accepted successfully! Notifications sent.');
+          setAcceptedBidId(bidId);
+          await fetchTutorBids();
+        }
+      } catch (chatErr) {
+        console.warn('⚠️ Failed to get/create conversation:', chatErr);
+        alert('✅ Bid accepted successfully! Notifications sent.');
+        setAcceptedBidId(bidId);
+        await fetchTutorBids();
+      }
     } catch (err) {
       console.error('Error accepting bid:', err);
       alert('❌ Error: ' + (err.response?.data?.message || err.message));

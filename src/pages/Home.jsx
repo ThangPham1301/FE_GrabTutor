@@ -16,14 +16,14 @@ export default function Home() {
       <Stats />
       <Subjects />
 
-      {/* Hiển thị thông tin đăng nhập nếu là student */}
+      {/* Display login information if user is student */}}
       {user && user.role === 'STUDENT' && (
         <div className="max-w-3xl mx-auto my-8 p-6 bg-green-50 rounded-xl shadow text-center">
           <h2 className="text-2xl font-bold text-green-700 mb-2">
             Xin chào, {user.fullName || user.email}!
           </h2>
           <p className="text-gray-700 mb-4">
-            Bạn đã đăng nhập thành công với vai trò <span className="font-semibold">{user.role}</span>.
+            You have successfully logged in with role <span className="font-semibold">{user.role}</span>.
           </p>
           <button
             onClick={logout}

@@ -119,12 +119,12 @@ export default function LessonManagement() {
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      alert('❌ Vui lòng nhập tiêu đề bài học');
+      alert('❌ Please enter lesson title');
       return;
     }
 
     if (!formData.content.trim()) {
-      alert('❌ Vui lòng nhập nội dung bài học');
+      alert('❌ Please enter lesson content');
       return;
     }
 

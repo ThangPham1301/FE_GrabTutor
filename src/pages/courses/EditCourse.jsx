@@ -126,12 +126,12 @@ export default function EditCourse() {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert('❌ Vui lòng nhập tên khóa học');
+      alert('❌ Please enter course name');
       return;
     }
 
     if (!formData.description.trim()) {
-      alert('❌ Vui lòng nhập mô tả khóa học');
+      alert('❌ Please enter course description');
       return;
     }
 

@@ -140,7 +140,7 @@ export default function PostFormModal({
     
     // Validation
     if (!formData.title.trim()) {
-      alert('Vui lòng nhập tiêu đề bài đăng');
+      alert('Please enter post title');
       return;
     }
     if (!formData.subjectId) {
@@ -148,7 +148,7 @@ export default function PostFormModal({
       return;
     }
     if (!formData.description.trim()) {
-      alert('Vui lòng nhập mô tả');
+      alert('Please enter description');
       return;
     }
     if (!editingPost && !formData.file) {

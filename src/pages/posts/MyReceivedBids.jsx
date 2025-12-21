@@ -148,17 +148,38 @@ export default function MyReceivedBids() {
         console.warn('⚠️ Failed to send student notification:', notifErr);
       }
 
-      alert('✅ Bid accepted successfully! Notifications sent.');
-      
-      // Update bid status
-      setPostBids(prev => ({
-        ...prev,
-        [postId]: prev[postId].map(bid =>
-          bid.id === bidId ? { ...bid, status: 'ACCEPTED' } : bid
-        )
-      }));
-      
-      await fetchBidsForPost(postId);
+      // ✅ GET OR CREATE CONVERSATION + NAVIGATE
+      try {
+        const conversationData = await chatApi.getOrCreateConversation(postId, bidId);
+        const roomId = conversationData?.roomId || conversationData?.id;
+        
+        if (roomId) {
+          console.log('✅ Chatroom created/found:', roomId);
+          alert('✅ Bid accepted successfully! Opening chatroom...');
+          navigate(`/chat?roomId=${roomId}`);
+        } else {
+          alert('✅ Bid accepted successfully! Notifications sent.');
+          // Update bid status
+          setPostBids(prev => ({
+            ...prev,
+            [postId]: prev[postId].map(bid =>
+              bid.id === bidId ? { ...bid, status: 'ACCEPTED' } : bid
+            )
+          }));
+          await fetchBidsForPost(postId);
+        }
+      } catch (chatErr) {
+        console.warn('⚠️ Failed to get/create conversation:', chatErr);
+        alert('✅ Bid accepted successfully! Notifications sent.');
+        // Update bid status
+        setPostBids(prev => ({
+          ...prev,
+          [postId]: prev[postId].map(bid =>
+            bid.id === bidId ? { ...bid, status: 'ACCEPTED' } : bid
+          )
+        }));
+        await fetchBidsForPost(postId);
+      }
     } catch (err) {
       console.error('Error accepting bid:', err);
       alert('❌ Error: ' + (err.response?.data?.message || err.message));
