@@ -200,25 +200,25 @@ export default function TutorCourseInventory() {
 
           {/* Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-sm text-teal-100">Total Courses</p>
-              <p className="text-3xl font-bold mt-1">{stats.total}</p>
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-4 border-2 border-teal-200">
+              <p className="text-sm text-teal-700 font-semibold">Total Courses</p>
+              <p className="text-3xl font-bold text-teal-600 mt-1">{stats.total}</p>
             </div>
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-sm text-teal-100">Published</p>
-              <p className="text-3xl font-bold text-green-300 mt-1">{stats.published}</p>
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-200">
+              <p className="text-sm text-green-700 font-semibold">Published</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{stats.published}</p>
             </div>
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-sm text-teal-100">Unpublished</p>
-              <p className="text-3xl font-bold text-yellow-300 mt-1">{stats.unpublished}</p>
+            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-4 border-2 border-yellow-200">
+              <p className="text-sm text-yellow-700 font-semibold">Unpublished</p>
+              <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.unpublished}</p>
             </div>
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-sm text-teal-100">Total Students</p>
-              <p className="text-3xl font-bold text-blue-300 mt-1">{stats.totalEnrolled}</p>
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
+              <p className="text-sm text-blue-700 font-semibold">Total Students</p>
+              <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalEnrolled}</p>
             </div>
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-sm text-teal-100">Estimated Revenue</p>
-              <p className="text-2xl font-bold text-yellow-200 mt-1">{(stats.totalRevenue / 1000000).toFixed(1)}M</p>
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200">
+              <p className="text-sm text-purple-700 font-semibold">Estimated Revenue</p>
+              <p className="text-2xl font-bold text-purple-600 mt-1">{(stats.totalRevenue / 1000000).toFixed(1)}M</p>
             </div>
           </div>
         </div>

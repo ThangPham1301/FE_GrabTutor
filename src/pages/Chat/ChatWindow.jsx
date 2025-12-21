@@ -58,6 +58,13 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
   const fileInputRef = useRef(null);
 
   // ==================== EFFECTS ====================
+  // ✅ Auto-scroll to bottom when messages change
+  useEffect(() => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+  }, [messages]);
+
   useEffect(() => {
     if (!conversation?.id) return;
 
@@ -110,6 +117,10 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
   useEffect(() => {
     if (!conversation?.id || !wsConnected) return;
 
+    // ✅ Set current room ID so UPDATE signal can fetch it
+    chatApi.setCurrentRoomId(conversation.id);
+    if (DEBUG) console.log('💾 [ChatWindow] Set current room ID to:', conversation.id);
+
     const handleNewMessage = (event) => {
       const msgData = event?.data || event;
       
@@ -124,7 +135,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
             msg.id === msgData.id
               ? {
                   ...msg,
-                  message: '(tin nhắn đã gỡ)',
+                  message: '(message retracted)',
                   fileUrl: null,
                   fileName: null,
                   isDeleted: true
@@ -182,6 +193,58 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
 
     if (chatApi.onMessage) {
       chatApi.onMessage(handleNewMessage);
+    }
+
+    // ✅ NEW - Listen for room status updates (UPDATE/TIMEOUT from WebSocket)
+    if (chatApi.onUpdate) {
+      chatApi.onUpdate((data) => {
+        if (DEBUG) {
+          console.log('\n✨✨✨ [ChatWindow] UPDATE/TIMEOUT HANDLER TRIGGERED ✨✨✨');
+          console.log('   Signal type:', data.type);
+          console.log('   Room ID:', data.roomId);
+          console.log('   Has room data:', !!data.room);
+        }
+        
+        // If backend provides updated room data, use it
+        if (data.room) {
+          if (DEBUG) {
+            console.log('✅ [ChatWindow] Room data available - updating local state');
+            console.log('   New room status:', data.room?.status);
+            console.log('   Room object:', JSON.stringify(data.room, null, 2));
+          }
+          
+          // ✅ Update room object (triggers re-render of all UI elements using room data)
+          setRoom(data.room);
+          
+          // ✅ Update room status state for button visibility logic
+          setRoomStatus(data.room?.status);
+          
+          // ✅ Trigger UI update with detailed logging
+          if (data.type === 'TIMEOUT') {
+            if (DEBUG) {
+              console.log('⏰ [ChatWindow] TIMEOUT - Session expired');
+              console.log('   UI will now show: TIMEOUT state, disable all buttons');
+              console.log('   Room status changed to:', data.room?.status);
+              console.log('   Closing report form if open');
+            }
+            setShowReportForm(false);  // ✅ Close report form on timeout
+            alert('⏰ Session timeout! Please refresh.');
+          } else if (data.type === 'UPDATE') {
+            if (DEBUG) {
+              console.log('🔄 [ChatWindow] REAL-TIME UPDATE received (may be from admin action)');
+              console.log(`   Status transition: ${roomStatus} → ${data.room?.status}`);
+              console.log('   UI will re-render immediately with new room data');
+              console.log('   All components using room/roomStatus state will update');
+              console.log('   Report button visibility will update based on new status');
+              console.log('   Closing report form if open');
+            }
+            setShowReportForm(false);  // ✅ Close report form on UPDATE (may affect button visibility)
+            // ✅ Room state and status both updated above - triggers full UI re-render
+          }
+        } else {
+          if (DEBUG) console.log('⚠️ [ChatWindow] No room data in signal, original message:', JSON.stringify(data, null, 2));
+        }
+      });
     }
 
     return () => {};
@@ -296,9 +359,12 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
 
     try {
       setIsSubmitting(true);
+      if (DEBUG) console.log('📤 [ChatWindow] Tutor submitting solution for room:', conversation.id);
+      
       await chatApi.submitSolution(conversation.id);
       alert('✅ Submitted successfully!');
       
+      if (DEBUG) console.log('📤 [ChatWindow] Waiting for UPDATE/TIMEOUT signal from WebSocket...');
       setRoomStatus('SUBMITTED');
       setRemainingTime(15 * 60);
       
@@ -316,9 +382,12 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
 
     try {
       setIsConfirming(true);
+      if (DEBUG) console.log('✅ [ChatWindow] Student confirming solution for room:', conversation.id);
+      
       await chatApi.confirmSolution(conversation.id);
       alert('✅ Confirmed!');
       
+      if (DEBUG) console.log('✅ [ChatWindow] Waiting for UPDATE/TIMEOUT signal from WebSocket...');
       setRoomStatus('CONFIRMED');
       setRemainingTime(null);
       
@@ -344,14 +413,30 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       setReportSubmitting(true);
       setReportError(null);
 
+      if (DEBUG) {
+        console.log('📤 [ChatWindow] Submitting report...');
+        console.log('   Post ID:', conversation.postId);
+        console.log('   Report detail:', reportDetail);
+      }
+
       await reportApi.createReport(conversation.postId, {
         detail: reportDetail
       });
 
+      if (DEBUG) {
+        console.log('✅ [ChatWindow] Report submitted successfully!');
+        console.log('   Closing report form immediately');
+        console.log('   Clearing form data');
+      }
+
       alert('✅ Report submitted!');
       
+      // ✅ Close form immediately - triggers UI update
       setShowReportForm(false);
       setReportDetail('');
+      setReportError(null);
+      
+      if (DEBUG) console.log('✨ [ChatWindow] Report form closed, UI updated');
       onRefresh?.();
     } catch (err) {
       console.error('Error submitting report:', err);
@@ -533,18 +618,19 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
             <FaArrowLeft size={20} />
           </button>
           
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center font-bold text-sm md:text-lg flex-shrink-0">
-            {(conversation.participantName || 'U').charAt(0).toUpperCase()}
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-base md:text-lg truncate">
-              {conversation.participantName || 'Tutor'}
-            </h2>
-            <p className="text-xs text-teal-100 flex items-center gap-1 truncate">
-              <FaEnvelope size={12} />
-              {conversation.participantEmail || 'N/A'}
-            </p>
+          {/* User Info Section */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Avatar - Participant */}
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center font-bold text-sm md:text-lg flex-shrink-0 text-teal-600">
+              <div className="text-lg">{user?.role === 'TUTOR' ? 'S' : 'T'}</div>
+            </div>
+            
+            {/* Name and Emails */}
+            <div className="flex-1 min-w-0">
+              <h2 className="font-bold text-base md:text-lg truncate">
+                {user?.role === 'TUTOR' ? 'Student' : 'Tutor'}
+              </h2>
+            </div>
           </div>
         </div>
 
@@ -561,39 +647,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
           <span className="hidden sm:inline">{roomStatus || 'Loading'}</span>
         </div>
 
-        {/* More Options */}
-        <div className="relative ml-2 md:ml-3 flex-shrink-0">
-          <button
-            onClick={() => setShowMoreOptions(!showMoreOptions)}
-            className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-          >
-            <FaEllipsisV size={16} />
-          </button>
 
-          {showMoreOptions && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
-              <button
-                onClick={() => {
-                  setShowMoreOptions(false);
-                }}
-                className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100 text-sm"
-              >
-                <FaTrash size={14} className="text-red-600" />
-                <span className="font-semibold">Delete Chat</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowReportForm(true);
-                  setShowMoreOptions(false);
-                }}
-                className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors text-sm"
-              >
-                <FaFlag size={14} className="text-red-600" />
-                <span className="font-semibold">Report</span>
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Error message */}
@@ -736,7 +790,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       )}
 
       {/* ==================== MESSAGES ==================== */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-2 md:px-3 py-2 md:py-3 space-y-2 flex flex-col-reverse min-h-0">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
@@ -764,7 +818,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
                 onMouseEnter={() => setHoveredMessageId(msg.id)}
                 onMouseLeave={() => setHoveredMessageId(null)}
               >
-                <div className={`flex gap-2 md:gap-3 max-w-xs md:max-w-sm ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex gap-2 md:gap-2 max-w-xl md:max-w-2xl ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
                   {!isOwnMessage && (
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#03ccba] to-[#02b5a5] rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                       {(conversation.participantName || 'T').charAt(0).toUpperCase()
@@ -979,7 +1033,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       
       {/* Report Form Modal */}
       {showReportForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -1061,7 +1115,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       {/* Image Modal */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 backdrop-blur-sm bg-black/80 flex items-center justify-center z-50 p-4"
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative max-w-4xl max-h-screen">

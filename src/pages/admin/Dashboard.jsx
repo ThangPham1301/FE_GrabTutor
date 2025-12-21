@@ -154,7 +154,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={handleLogout}
-              className="px-6 py-3 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg font-bold transition-all flex items-center gap-2 backdrop-blur"
+              className="px-6 py-3 bg-white text-[#03ccba] hover:bg-gray-100 rounded-lg font-bold transition-all flex items-center gap-2 shadow-lg"
             >
               <FaSignOutAlt /> Logout
             </button>
@@ -318,62 +318,6 @@ export default function AdminDashboard() {
                 </button>
               );
             })}
-          </div>
-        </div>
-
-        {/* ==================== QUICK ACTIONS ==================== */}
-        <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] rounded-xl shadow-lg p-8 text-white">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <FaChartLine /> Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <button
-              onClick={() => navigate('/admin/users')}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-4 text-left transition-all backdrop-blur border border-white border-opacity-20"
-            >
-              <p className="font-semibold mb-1">View All Users</p>
-              <p className="text-sm text-teal-100">Manage user accounts</p>
-            </button>
-
-            <button
-              onClick={() => navigate('/admin/posts')}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-4 text-left transition-all backdrop-blur border border-white border-opacity-20"
-            >
-              <p className="font-semibold mb-1">Browse Posts</p>
-              <p className="text-sm text-teal-100">Monitor all questions</p>
-            </button>
-
-            <button
-              onClick={() => navigate('/admin/interactions')}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-4 text-left transition-all backdrop-blur border border-white border-opacity-20"
-            >
-              <p className="font-semibold mb-1">View Reports</p>
-              <p className="text-sm text-teal-100">Handle user reports</p>
-            </button>
-
-            <button
-              onClick={() => navigate('/admin/transactions')}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-4 text-left transition-all backdrop-blur border border-white border-opacity-20"
-            >
-              <p className="font-semibold mb-1">Transaction History</p>
-              <p className="text-sm text-teal-100">Check wallet data</p>
-            </button>
-
-            <button
-              onClick={() => navigate('/admin/tutors')}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-4 text-left transition-all backdrop-blur border border-white border-opacity-20"
-            >
-              <p className="font-semibold mb-1">Tutor Dashboard</p>
-              <p className="text-sm text-teal-100">Monitor tutors</p>
-            </button>
-
-            <button
-              onClick={() => navigate('/admin/subjects')}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg p-4 text-left transition-all backdrop-blur border border-white border-opacity-20"
-            >
-              <p className="font-semibold mb-1">Subject Library</p>
-              <p className="text-sm text-teal-100">Manage subjects</p>
-            </button>
           </div>
         </div>
 

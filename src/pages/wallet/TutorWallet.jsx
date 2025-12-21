@@ -402,13 +402,7 @@ export default function TutorWallet() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-                  <button
-                    onClick={() => navigate('/wallet/recharge')}
-                    className="px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                  >
-                    <FaCreditCard /> Recharge
-                  </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                   <button
                     onClick={() => setActiveTab('withdraw')}
                     className="px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"

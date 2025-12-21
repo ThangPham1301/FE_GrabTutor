@@ -57,20 +57,10 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
       return false;
     }
 
-    if (price < 50000) {
-      setError('❌ Minimum price is 50,000 VNĐ');
-      return false;
-    }
-
     // Check description
     const descStr = formData.description?.toString().trim();
     if (!descStr) {
       setError('❌ Please enter description');
-      return false;
-    }
-
-    if (descStr.length < 10) {
-      setError('❌ Description must be at least 10 characters');
       return false;
     }
 
@@ -221,7 +211,7 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
           {/* Proposed Price */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              💰 Proposed Price (VNĐ/hour)
+              💰 Proposed Price (VNĐ)
               <span className="text-red-500 ml-1">*</span>
             </label>
             <div className="relative">
@@ -240,8 +230,6 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">VNĐ</span>
             </div>
-            {/* ✅ SỬA: Cập nhật thông báo helper text */}
-            <p className="text-xs text-gray-500 mt-1">💡 Nhập giá theo giờ</p>
           </div>
 
           {/* Question Level */}
@@ -260,7 +248,6 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
               <option value="EASY">🟢 Easy</option>
               <option value="MEDIUM">🟡 Medium</option>
               <option value="HARD">🔴 Hard</option>
-              <option value="VERY_HARD">⚫ Very Hard</option>
             </select>
           </div>
 
@@ -281,14 +268,11 @@ export default function TutorBidModal({ isOpen, onClose, onSuccess, post }) {
               disabled={loading}
               required
             />
-            <div className="flex justify-between items-center mt-2">
-              <p className="text-xs text-gray-500">Min: 10 characters</p>
-              <p className={`text-xs font-semibold ${
-                formData.description.length > 450 ? 'text-red-500' : 'text-gray-600'
-              }`}>
-                {formData.description.length}/500
-              </p>
-            </div>
+            <p className={`text-xs font-semibold text-right mt-2 ${
+              formData.description.length > 450 ? 'text-red-500' : 'text-gray-600'
+            }`}>
+              {formData.description.length}/500
+            </p>
           </div>
 
           {/* ==================== BUTTONS ==================== */}

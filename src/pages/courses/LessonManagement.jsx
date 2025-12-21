@@ -150,7 +150,7 @@ export default function LessonManagement() {
 
       // ✅ Check if operation was successful
       if (response?.success || response?.data?.id) {
-        alert('✅ ' + (editingId ? 'Cập nhật' : 'Tạo') + ' bài học thành công!');
+        alert('✅ ' + (editingId ? 'Update' : 'Create') + ' lesson successfully!');
         resetForm();
         setShowForm(false);
         setEditingId(null);
@@ -199,13 +199,13 @@ export default function LessonManagement() {
   };
 
   const handleDelete = async (lessonId) => {
-    if (window.confirm('Bạn chắc chắn muốn xóa bài học này?')) {
+    if (window.confirm('Are you sure you want to delete this lesson?')) {
       try {
         await lessonApi.deleteLesson(lessonId);
-        alert('✅ Xóa bài học thành công!');
+        alert('✅ Delete lesson successfully!');
         fetchLessons();
       } catch (error) {
-        alert('❌ Lỗi: ' + error.message);
+        alert('❌ Error: ' + error.message);
       }
     }
   };
@@ -229,9 +229,9 @@ export default function LessonManagement() {
             onClick={() => navigate(`/courses/${courseId}`)}
             className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
           >
-            <FaArrowLeft /> Quay lại
+            <FaArrowLeft /> Back
           </button>
-          <h1 className="text-4xl font-bold mb-2">Quản lý bài học</h1>
+          <h1 className="text-4xl font-bold mb-2">Lesson Management</h1>
           <p className="text-teal-100">{course?.name}</p>
         </div>
       </div>
@@ -247,7 +247,7 @@ export default function LessonManagement() {
             }}
             className="mb-8 px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg font-bold hover:shadow-lg transition-all flex items-center gap-2"
           >
-            <FaPlus size={18} /> Thêm bài học mới
+            <FaPlus size={18} /> Add New Lesson
           </button>
         )}
 
@@ -255,54 +255,54 @@ export default function LessonManagement() {
         {showForm && (
           <div className="bg-white rounded-lg shadow-lg p-8 mb-12 border-l-4 border-[#03ccba]">
             <h2 className="text-2xl font-bold mb-6">
-              {editingId ? '✏️ Chỉnh sửa bài học' : '➕ Tạo bài học mới'}
+              {editingId ? '✏️ Edit Lesson' : '➕ Create New Lesson'}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Lesson Number */}
               <div>
-                <label className="block text-gray-700 font-bold mb-2">Số thứ tự bài học</label>
+                <label className="block text-gray-700 font-bold mb-2">Lesson Number</label>
                 <input
                   type="number"
                   min="1"
                   value={formData.lessonNumber}
                   onChange={(e) => setFormData(prev => ({ ...prev, lessonNumber: parseInt(e.target.value) || '' }))}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all"
-                  placeholder="Ví dụ: 1, 2, 3..."
+                  placeholder="Example: 1, 2, 3..."
                 />
               </div>
 
               {/* Title */}
               <div>
-                <label className="block text-gray-700 font-bold mb-2">Tiêu đề bài học</label>
+                <label className="block text-gray-700 font-bold mb-2">Lesson Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all"
-                  placeholder="Ví dụ: Giới thiệu Spring Boot"
+                  placeholder="Example: Introduction to Spring Boot"
                 />
               </div>
 
               {/* Content */}
               <div>
-                <label className="block text-gray-700 font-bold mb-2">Nội dung bài học</label>
+                <label className="block text-gray-700 font-bold mb-2">Lesson Content</label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                   rows="6"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#03ccba] focus:ring-2 focus:ring-[#03ccba] focus:ring-opacity-30 outline-none transition-all resize-vertical"
-                  placeholder="Nhập nội dung bài học tại đây..."
+                  placeholder="Enter lesson content here..."
                 />
               </div>
 
               {/* Video Upload */}
               <div>
-                <label className="block text-gray-700 font-bold mb-2">Video bài học</label>
+                <label className="block text-gray-700 font-bold mb-2">Lesson Video</label>
                 <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#03ccba] hover:bg-blue-50 transition-all cursor-pointer group">
                   <div className="text-center">
                     <FaVideo className="mx-auto text-3xl text-gray-400 group-hover:text-[#03ccba] mb-2" />
-                    <p className="text-gray-700 font-semibold">Tải lên video</p>
+                    <p className="text-gray-700 font-semibold">Upload Video</p>
                     <p className="text-gray-600 text-sm">MP4, MOV, AVI (Max 100MB)</p>
                     {videoPreview && (
                       <p className="text-green-600 text-sm font-bold mt-2">✓ {videoPreview}</p>
@@ -319,11 +319,11 @@ export default function LessonManagement() {
 
               {/* Image Upload */}
               <div>
-                <label className="block text-gray-700 font-bold mb-2">Hình ảnh bài học</label>
+                <label className="block text-gray-700 font-bold mb-2">Lesson Image</label>
                 <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#03ccba] hover:bg-blue-50 transition-all cursor-pointer group">
                   <div className="text-center">
                     <FaImage className="mx-auto text-3xl text-gray-400 group-hover:text-[#03ccba] mb-2" />
-                    <p className="text-gray-700 font-semibold">Tải lên hình ảnh</p>
+                    <p className="text-gray-700 font-semibold">Upload Image</p>
                     <p className="text-gray-600 text-sm">PNG, JPG (Max 5MB)</p>
                   </div>
                   <input
@@ -350,7 +350,7 @@ export default function LessonManagement() {
                       }}
                       className="mt-2 text-red-600 font-bold hover:underline"
                     >
-                      ✕ Xóa hình ảnh
+                      ✕ Remove Image
                     </button>
                   </div>
                 )}
@@ -368,11 +368,11 @@ export default function LessonManagement() {
                 <label htmlFor="isPreview" className="text-gray-700 font-semibold">
                   {formData.isPreview ? (
                     <span className="flex items-center gap-2">
-                      <FaEye /> Bài học mở rộng (học viên chưa đăng ký có thể xem)
+                      <FaEye /> Preview Lesson (unregistered users can view)
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      <FaEyeSlash /> Bài học riêng tư (chỉ học viên đã đăng ký có thể xem)
+                      <FaEyeSlash /> Private Lesson (only registered users can view)
                     </span>
                   )}
                 </label>
@@ -385,7 +385,7 @@ export default function LessonManagement() {
                   disabled={submitting}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? '⏳ Đang xử lý...' : (editingId ? '💾 Cập nhật' : '➕ Tạo mới')}
+                  {submitting ? '⏳ Processing...' : (editingId ? '💾 Update' : '➕ Create')}
                 </button>
                 <button
                   type="button"
@@ -395,7 +395,7 @@ export default function LessonManagement() {
                   }}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition-all"
                 >
-                  ✕ Hủy
+                  ✕ Cancel
                 </button>
               </div>
             </form>
@@ -405,13 +405,13 @@ export default function LessonManagement() {
         {/* Lessons List */}
         <div>
           <h2 className="text-2xl font-bold mb-6">
-            📚 Danh sách bài học ({lessons.length})
+            📚 Lesson List ({lessons.length})
           </h2>
 
           {lessons.length === 0 ? (
             <div className="text-center bg-white rounded-lg p-12 border-2 border-dashed border-gray-300">
               <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">Chưa có bài học nào. Hãy thêm bài học mới!</p>
+              <p className="text-gray-600 text-lg">No lessons yet. Add a new lesson!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -436,13 +436,13 @@ export default function LessonManagement() {
 
                     {/* Lesson Number Badge */}
                     <div className="absolute top-3 left-3 bg-white text-[#03ccba] px-3 py-1 rounded-full font-bold text-sm">
-                      Bài {lesson.lessonNumber}
+                      Lesson {lesson.lessonNumber}
                     </div>
 
                     {/* Preview Badge - ✅ Check both isPreview and preview */}
                     {(lesson.isPreview || lesson.preview) && (
                       <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1">
-                        <FaEye size={12} /> Mở rộng
+                        <FaEye size={12} /> Preview
                       </div>
                     )}
                   </div>
@@ -466,7 +466,7 @@ export default function LessonManagement() {
                       )}
                       {lesson.imageUrl && (
                         <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          <FaImage size={12} /> Hình ảnh
+                          <FaImage size={12} /> Image
                         </div>
                       )}
                     </div>
@@ -477,19 +477,19 @@ export default function LessonManagement() {
                         onClick={() => handleEdit(lesson)}
                         className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold flex items-center justify-center gap-1 text-sm"
                       >
-                        <FaEdit size={14} /> Sửa
+                        <FaEdit size={14} /> Edit
                       </button>
                       <button
                         onClick={() => handleDelete(lesson.id)}
                         className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold flex items-center justify-center gap-1 text-sm"
                       >
-                        <FaTrash size={14} /> Xóa
+                        <FaTrash size={14} /> Delete
                       </button>
                       <button
                         onClick={() => navigate(`/courses/${courseId}/learn/${lesson.id}`)}
                         className="flex-1 px-3 py-2 border-2 border-[#03ccba] text-[#03ccba] rounded-lg hover:bg-[#03ccba] hover:text-white transition-all font-semibold flex items-center justify-center gap-1 text-sm"
                       >
-                        <FaPlay size={14} /> Xem
+                        <FaPlay size={14} /> View
                       </button>
                     </div>
                   </div>
@@ -507,17 +507,17 @@ export default function LessonManagement() {
               disabled={pageNo === 0}
               className="px-6 py-2 bg-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400"
             >
-              ← Trước
+              ← Previous
             </button>
             <span className="text-gray-600 font-bold">
-              Trang {pageNo + 1} / {totalPages}
+              Page {pageNo + 1} / {totalPages}
             </span>
             <button
               onClick={() => setPageNo(Math.min(totalPages - 1, pageNo + 1))}
               disabled={pageNo >= totalPages - 1}
               className="px-6 py-2 bg-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-400"
             >
-              Tiếp →
+              Next →
             </button>
           </div>
         )}

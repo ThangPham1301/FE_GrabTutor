@@ -169,7 +169,7 @@ export default function MyEnrolledCourses() {
 
           <div className="flex items-center gap-6 mb-8">
             <div className="w-20 h-20 bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <FaGraduationCap className="text-5xl" />
+              <FaGraduationCap className="text-5xl text-teal-600" />
             </div>
             <div>
               <h1 className="text-5xl md:text-6xl font-bold">My Learning</h1>
@@ -181,19 +181,19 @@ export default function MyEnrolledCourses() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-teal-100 text-sm font-semibold">Total Courses</p>
-              <p className="text-3xl font-bold mt-2">{courses.length}</p>
+            <div className="bg-gray-100 rounded-lg p-4 border border-gray-300">
+              <p className="text-teal-600 text-sm font-semibold">Total Courses</p>
+              <p className="text-3xl font-bold mt-2 text-gray-900">{courses.length}</p>
             </div>
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-teal-100 text-sm font-semibold">Total Lessons</p>
-              <p className="text-3xl font-bold mt-2">
+            <div className="bg-gray-100 rounded-lg p-4 border border-gray-300">
+              <p className="text-teal-600 text-sm font-semibold">Total Lessons</p>
+              <p className="text-3xl font-bold mt-2 text-gray-900">
                 {courses.reduce((sum, c) => sum + (c.totalLessons || 0), 0)}
               </p>
             </div>
-            <div className="bg-white bg-opacity-15 backdrop-blur rounded-lg p-4 border border-white border-opacity-20">
-              <p className="text-teal-100 text-sm font-semibold">Instructors</p>
-              <p className="text-3xl font-bold mt-2">
+            <div className="bg-gray-100 rounded-lg p-4 border border-gray-300">
+              <p className="text-teal-600 text-sm font-semibold">Instructors</p>
+              <p className="text-3xl font-bold mt-2 text-gray-900">
                 {new Set(courses.map(c => c.tutorId)).size}
               </p>
             </div>
@@ -330,11 +330,7 @@ export default function MyEnrolledCourses() {
                       <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
                         ✓ Completed
                       </div>
-                    ) : (
-                      <div className="absolute top-3 right-3 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                        {progress}%
-                      </div>
-                    )}
+                    ) : null}
 
                     {/* Lessons Badge */}
                     <div className="absolute bottom-3 left-3 bg-white bg-opacity-90 backdrop-blur rounded-lg px-3 py-1 shadow-md">
@@ -467,11 +463,7 @@ export default function MyEnrolledCourses() {
                         <div className="px-4 py-2 bg-green-100 text-green-800 rounded-lg text-center font-bold text-sm mb-3">
                           ✓ Completed
                         </div>
-                      ) : (
-                        <div className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-center font-bold text-sm mb-3">
-                          {progress}% Complete
-                        </div>
-                      )}
+                      ) : null}
 
                       {/* Action Button */}
                       <button

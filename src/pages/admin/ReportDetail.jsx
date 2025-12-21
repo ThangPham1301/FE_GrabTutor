@@ -53,7 +53,12 @@ export default function ReportDetail() {
 
       // STEP 1: Get report data
       const reportData = await reportApi.getReportById(reportId);
+      if (DEBUG) console.log('📋 Full Report Object:', JSON.stringify(reportData, null, 2));
       if (DEBUG) console.log('📋 Report data:', reportData);
+      if (DEBUG) console.log('📋 Report status:', reportData?.status);
+      if (DEBUG) console.log('📋 Report reportStatus:', reportData?.reportStatus);
+      if (DEBUG) console.log('📋 Chat Room ID:', reportData?.chatRoomId);
+      if (DEBUG) console.log('📋 Post ID:', reportData?.postId);
       setReport(reportData);
 
       // STEP 2: Fetch post by postId to get imageUrl
@@ -96,6 +101,7 @@ export default function ReportDetail() {
           if (DEBUG) console.log('💬 Fetching room...', reportData.chatRoomId);
           const roomData = await chatApi.getRoomById(reportData.chatRoomId);
           if (DEBUG) console.log('💬 Room data:', roomData);
+          if (DEBUG) console.log('💬 Room ID:', roomData?.id);
           setRoom(roomData);
 
           // STEP 5: Fetch messages from room
@@ -121,6 +127,8 @@ export default function ReportDetail() {
           console.error('❌ Error fetching room:', roomErr);
           setError('Unable to load chat room');
         }
+      } else {
+        if (DEBUG) console.log('⚠️ No chatRoomId found in report');
       }
     } catch (err) {
       console.error('❌ Error:', err);
@@ -304,14 +312,14 @@ export default function ReportDetail() {
                 <h2 className="text-2xl font-bold text-gray-900">Report Information</h2>
                 <span
                   className={`px-4 py-2 rounded-full text-sm font-bold ${
-                    getStatusBadge(report.status).color
+                    getStatusBadge(report.reportStatus).color
                   }`}
                 >
-                  {getStatusBadge(report.status).text}
+                  {getStatusBadge(report.reportStatus).text}
                 </span>
               </div>
               <p className="text-gray-600">
-                {report.status === 'PENDING'
+                {report.reportStatus === 'PENDING'
                   ? 'This report is awaiting review'
                   : 'This report has been resolved'}
               </p>
@@ -401,7 +409,7 @@ export default function ReportDetail() {
             </div>
 
             {/* Action Buttons */}
-            {report.status === 'PENDING' && room && (
+            {report.reportStatus === 'PENDING' && room && (
               <div className="bg-white rounded-lg shadow-md p-6 border-t">
                 <p className="text-gray-700 font-semibold mb-4">
                   🔧 Choose an action to resolve this report:

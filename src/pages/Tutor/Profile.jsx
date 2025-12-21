@@ -177,20 +177,23 @@ export default function Profile() {
       <Navbar />
 
       {/* ==================== HEADER ==================== */}
-      <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] rounded-2xl shadow-xl p-8 mb-8 text-white mx-4 mt-4">
-        <div className="flex justify-between items-start">
+      <div className="max-w-6xl mx-auto px-4 mb-8">
+        <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] rounded-2xl shadow-xl p-8 text-white">
+          <div className="flex justify-between items-start">
           <div className="flex items-start gap-6">
-            <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <FaUserCircle className="text-5xl text-white" />
+            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-4xl font-bold text-teal-600">
+                {(myInfo?.fullName || user?.fullName || user?.email || 'U')[0].toUpperCase()}
+              </span>
             </div>
             <div>
               <h1 className="text-4xl font-bold mb-2">Tutor Profile</h1>
               <p className="text-teal-100 text-lg">Manage your professional information</p>
               <div className="mt-4 flex items-center gap-4">
-                <span className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
+                <span className="bg-white text-teal-600 px-4 py-2 rounded-full text-sm font-semibold">
                   {myInfo?.role || user.role}
                 </span>
-                <span className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
+                <span className="bg-white text-teal-600 px-4 py-2 rounded-full text-sm font-semibold">
                   Active Member
                 </span>
               </div>
@@ -234,11 +237,10 @@ export default function Profile() {
               </>
             )}
           </div>
-        </div>
-      </div>
+        </div>      </div>      </div>
 
       {/* ==================== MAIN CONTENT ==================== */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           
           {/* LEFT COLUMN - Professional Info (2/3) */}

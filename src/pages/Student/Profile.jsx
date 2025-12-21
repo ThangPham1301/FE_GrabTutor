@@ -142,17 +142,19 @@ export default function Profile() {
         <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] rounded-2xl shadow-xl p-8 mb-8 text-white">
           <div className="flex justify-between items-start">
             <div className="flex items-start gap-6">
-              <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                <FaUserCircle className="text-5xl text-white" />
+              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-4xl font-bold text-teal-600">
+                  {(user?.fullName || user?.email || 'U')[0].toUpperCase()}
+                </span>
               </div>
               <div>
                 <h1 className="text-4xl font-bold mb-2">Student Profile</h1>
                 <p className="text-teal-100 text-lg">Manage your account and learning progress</p>
                 <div className="mt-4 flex items-center gap-4">
-                  <span className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
+                  <span className="bg-white text-teal-600 px-4 py-2 rounded-full text-sm font-semibold">
                     {user.role}
                   </span>
-                  <span className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
+                  <span className="bg-white text-teal-600 px-4 py-2 rounded-full text-sm font-semibold">
                     Active Member
                   </span>
                 </div>
@@ -362,36 +364,6 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Account Stats */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Account Stats</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FaClock className="text-blue-600" />
-                    <span className="text-sm text-gray-600">Member Since</span>
-                  </div>
-                  <span className="font-semibold text-gray-900">2024</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FaCheckCircle className="text-green-600" />
-                    <span className="text-sm text-gray-600">Verified</span>
-                  </div>
-                  <span className="font-semibold text-green-600">Yes</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FaStar className="text-yellow-600" />
-                    <span className="text-sm text-gray-600">Rating</span>
-                  </div>
-                  <span className="font-semibold text-yellow-600">5.0</span>
-                </div>
-              </div>
-            </div>
-
             {/* Security Info */}
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-6">
               <div className="flex items-start gap-3">
@@ -407,65 +379,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Additional Info Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Learning Progress */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Learning Progress</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Questions Asked</span>
-                  <span className="text-sm font-bold text-[#03ccba]">8/10</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] h-2 rounded-full" style={{width: '80%'}}></div>
-                </div>
-              </div>
 
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Topics Covered</span>
-                  <span className="text-sm font-bold text-blue-600">12/20</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{width: '60%'}}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Learning Streak</span>
-                  <span className="text-sm font-bold text-orange-600">7 Days</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-orange-500 h-2 rounded-full" style={{width: '100%'}}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Helpful Resources */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Helpful Resources</h3>
-            <div className="space-y-3">
-              <a href="#" className="block p-4 bg-gray-50 rounded-lg hover:bg-[#03ccba] hover:text-white transition-colors">
-                <p className="font-semibold mb-1">📚 Learning Guide</p>
-                <p className="text-sm">Get started with our platform</p>
-              </a>
-
-              <a href="#" className="block p-4 bg-gray-50 rounded-lg hover:bg-[#03ccba] hover:text-white transition-colors">
-                <p className="font-semibold mb-1">❓ FAQ</p>
-                <p className="text-sm">Find answers to common questions</p>
-              </a>
-
-              <a href="mailto:support@grabtutor.com" className="block p-4 bg-gray-50 rounded-lg hover:bg-[#03ccba] hover:text-white transition-colors">
-                <p className="font-semibold mb-1">💬 Contact Support</p>
-                <p className="text-sm">Get help from our team</p>
-              </a>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

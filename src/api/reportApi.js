@@ -15,7 +15,7 @@ const reportApi = {
       console.log('Payload:', payload);
       
       const response = await axios.post(
-        `${BASE_URL}/reports/post/${postId}`,
+        `${BASE_URL}/reports/post/${postId}/`,
         payload,
         {
           headers: {

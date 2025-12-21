@@ -84,7 +84,7 @@ const chatApi = {
         wsConnection.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (DEBUG) console.log('📨 [WS] Received:', data.type);
+            if (DEBUG) console.log('📨 [WS] Received:', data.type, '| Full data:', JSON.stringify(data));
 
             // Ignore PONG
             if (data.type === 'PONG') {
@@ -94,12 +94,54 @@ const chatApi = {
 
             // Trigger listeners
             if (data.type === 'MESSAGE') {
+              if (DEBUG) console.log('💬 [WS] MESSAGE signal - triggering onMessage listener');
               wsListeners['message']?.(data);
             } else if (data.type === 'NOTIFICATION') {
+              if (DEBUG) console.log('🔔 [WS] NOTIFICATION signal - triggering onNotification listener');
               wsListeners['notification']?.(data);
             } else if (data.type === 'ACK') {
+              if (DEBUG) console.log('✅ [WS] ACK signal - triggering onAck listener');
               wsListeners['ack']?.(data);
+            } else if (data.type === 'UPDATE' || data.type === 'TIMEOUT') {
+              // ✅ NEW - Auto fetch room status when state changes
+              if (DEBUG) console.log(`\n🔄🔄🔄 [WS] *** ${data.type} SIGNAL RECEIVED *** 🔄🔄🔄`);
+              if (DEBUG) console.log(`   Room ID: ${data.roomId || 'undefined'}`);
+              if (DEBUG) console.log(`   Full message:`, JSON.stringify(data, null, 2));
+              
+              // ✅ If roomId not in signal, use stored room ID
+              const targetRoomId = data.roomId || wsListeners['currentRoomId'];
+              
+              if (targetRoomId) {
+                if (DEBUG) console.log(`   → Fetching room data for room: ${targetRoomId}`);
+                chatApi.getRoomById(targetRoomId)
+                  .then(updatedRoom => {
+                    if (DEBUG) {
+                      console.log(`✅ [WS] Room fetched successfully!`);
+                      console.log(`   Room status: ${updatedRoom?.status}`);
+                      console.log(`   Room data:`, JSON.stringify(updatedRoom, null, 2));
+                      console.log(`   → Triggering onUpdate listener with ${data.type}`);
+                    }
+                    
+                    // Pass both original message and updated room to listener
+                    wsListeners['update']?.({
+                      type: data.type,
+                      roomId: targetRoomId,
+                      message: data,
+                      room: updatedRoom
+                    });
+                  })
+                  .catch(err => {
+                    console.error(`❌ [WS] Error fetching room after ${data.type}:`, err);
+                    if (DEBUG) console.log(`   → Triggering onUpdate listener with original message (API failed)`);
+                    // Still trigger listener with original message
+                    wsListeners['update']?.(data);
+                  });
+              } else {
+                if (DEBUG) console.log(`⚠️ [WS] No roomId in ${data.type} signal and no current room stored`);
+                wsListeners['update']?.(data);
+              }
             } else {
+              if (DEBUG) console.log(`❓ [WS] Unknown signal type: ${data.type} - triggering onUpdate listener`);
               wsListeners['update']?.(data);
             }
           } catch (err) {
@@ -286,6 +328,12 @@ const chatApi = {
     wsListeners['ack'] = callback;
   },
 
+  // ✅ NEW - Set current room ID for UPDATE/TIMEOUT signals
+  setCurrentRoomId: (roomId) => {
+    wsListeners['currentRoomId'] = roomId;
+    if (DEBUG) console.log('💾 [chatApi] Current room ID set to:', roomId);
+  },
+
   // ✅ API CALLS - Dùng FETCH thay vì AXIOS
   
   getRoomById: async (roomId) => {
@@ -356,7 +404,7 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
         id: msg.id,
         userId: msg.userId,
         email: msg.email,
-        message: isMessageDeleted ? '(tin nhắn đã gỡ)' : msg.message,
+        message: isMessageDeleted ? '(message retracted)' : msg.message,
         fileUrl: isMessageDeleted ? null : msg.fileUrl,
         fileName: isMessageDeleted ? null : msg.fileName,
         isDeleted: isMessageDeleted,
@@ -369,7 +417,7 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
     if (DEBUG) {
       console.log('📨 [API] Mapped messages:', mappedMessages);
       console.log('🗑️ [API] Messages with isDeleted=true:', mappedMessages.filter(m => m.isDeleted));
-      console.log('🗑️ [API] Messages with "(tin nhắn đã gỡ)" content:', mappedMessages.filter(m => m.message === '(tin nhắn đã gỡ)'));
+      console.log('🗑️ [API] Messages with "(message retracted)" content:', mappedMessages.filter(m => m.message === '(message retracted)'));
     }
     
     return mappedMessages;
@@ -466,7 +514,7 @@ getMessages: async (roomId, pageNo = 0, pageSize = 100) => {
       if (DEBUG) console.log('🏠 [API] Getting/creating conversation...');
 
       const response = await fetch(`${BASE_URL}/grabtutor/room/confirm`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

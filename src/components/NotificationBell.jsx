@@ -173,6 +173,14 @@ export default function NotificationBell() {
     } catch (error) {
       // ⚠️ Backend API has serialization bug - silently fail and use WebSocket only
       console.error('❌ ERROR fetching notifications:', error?.response?.data || error?.message);
+      console.error('📋 Full error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        message: error?.message,
+        data: error?.response?.data,
+        url: error?.config?.url,
+        userId: user.userId
+      });
       if (DEBUG) console.warn('⚠️ REST API unavailable (Backend bug):', error?.response?.data?.message || error?.message);
       if (DEBUG) console.log('📡 Using WebSocket-only mode for notifications');
       setNotifications([]);

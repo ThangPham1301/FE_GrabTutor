@@ -9,7 +9,6 @@ import Navbar from '../../components/Navbar';
 import postApi from '../../api/postApi';
 import reviewApi from '../../api/reviewApi';
 import chatApi from '../../api/chatApi';
-import userApi from '../../api/userApi';
 import ReviewFormModal from '../../components/ReviewFormModal';
 import TutorBidModal from '../../components/TutorBidModal';
 
@@ -39,9 +38,6 @@ export default function PostDetail() {
   
   // Conversation status
   const [conversation, setConversation] = useState(null);
-  
-  // User info
-  const [myInfo, setMyInfo] = useState(null);
 
   // ==================== EFFECTS ====================
   
@@ -60,24 +56,10 @@ export default function PostDetail() {
     if (user) {
       fetchReview();
       checkMyBid();
-      if (user.role === 'TUTOR') {
-        fetchMyInfo();
-      }
     }
   }, [postId, user]);
 
   // ==================== API CALLS ====================
-  const fetchMyInfo = async () => {
-    try {
-      const response = await userApi.getMyInfo();
-      const myInfoData = response?.data || response;
-      setMyInfo(myInfoData);
-      console.log('✅ fetchMyInfo - userStatus:', myInfoData?.userStatus);
-    } catch (err) {
-      console.error('❌ Error fetching myInfo:', err);
-    }
-  };
-
   const fetchSubjects = async () => {
     try {
       const response = await postApi.getSubjects();
@@ -578,7 +560,7 @@ export default function PostDetail() {
                 )}
 
                 {/* TUTOR - Not bidded yet */}
-                {user && user.role === 'TUTOR' && !hasBidded && post?.status === 'OPEN' && myInfo?.userStatus !== 'PENDING' && (
+                {user && user.role === 'TUTOR' && !hasBidded && post?.status === 'OPEN' && (
                   <button
                     onClick={() => setShowBidModal(true)}
                     className="w-full px-6 py-4 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white rounded-lg hover:shadow-lg transition-all font-bold flex items-center justify-center gap-2 text-base"
@@ -586,18 +568,6 @@ export default function PostDetail() {
                     <FaCheckCircle size={18} />
                     💰 Submit Bid
                   </button>
-                )}
-
-                {/* TUTOR - Pending Verification */}
-                {user && user.role === 'TUTOR' && myInfo?.userStatus === 'PENDING' && post?.status === 'OPEN' && (
-                  <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-                    <p className="text-yellow-800 text-sm font-bold flex items-center gap-2">
-                      <FaClock size={16} className="text-yellow-600" /> Pending Verification
-                    </p>
-                    <p className="text-yellow-700 text-xs mt-2">
-                      Your account is pending admin verification. Please contact admin to activate your account.
-                    </p>
-                  </div>
                 )}
 
                 {/* TUTOR - Already bidded */}

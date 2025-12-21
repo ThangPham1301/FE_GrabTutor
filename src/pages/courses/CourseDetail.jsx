@@ -17,6 +17,7 @@ export default function CourseDetail() {
   const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState(null);
   const [isTutorOwner, setIsTutorOwner] = useState(false);
+  const [enrolledCount, setEnrolledCount] = useState(0);
   
   // ✅ Track if we've already checked enrollment to prevent infinite loop
   const enrollmentCheckedRef = useRef(false);
@@ -37,6 +38,7 @@ export default function CourseDetail() {
   useEffect(() => {
     fetchCourseDetail();
     fetchLessons();
+    fetchEnrolledCount();
   }, [courseId]);
 
   // ✅ FIXED: Check enrollment status ONLY ONCE when course loads
@@ -82,6 +84,15 @@ export default function CourseDetail() {
       setLessons(items);
     } catch (err) {
       console.error('❌ Error fetching lessons:', err);
+    }
+  };
+
+  const fetchEnrolledCount = async () => {
+    try {
+      const response = await courseApi.getEnrolledCount(courseId);
+      setEnrolledCount(response.data || 0);
+    } catch (err) {
+      console.error('❌ Error fetching enrolled count:', err);
     }
   };
 
@@ -264,26 +275,16 @@ export default function CourseDetail() {
             </div>
 
             {/* Course Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-gray-50 p-4 rounded-lg text-center hover:shadow-md transition-shadow">
                 <FaBook className="text-[#03ccba] text-2xl mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{course.totalLessons || 0}</p>
+                <p className="text-2xl font-bold text-gray-900">{lessons.length || 0}</p>
                 <p className="text-gray-600 text-sm">Lessons</p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg text-center hover:shadow-md transition-shadow">
-                <FaStar className="text-yellow-400 text-2xl mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{course.rating || 4.5}</p>
-                <p className="text-gray-600 text-sm">Rating</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg text-center hover:shadow-md transition-shadow">
                 <FaUser className="text-[#03ccba] text-2xl mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{course.enrolledCount || 0}</p>
+                <p className="text-2xl font-bold text-gray-900">{enrolledCount}</p>
                 <p className="text-gray-600 text-sm">Students</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg text-center hover:shadow-md transition-shadow">
-                <FaClock className="text-[#03ccba] text-2xl mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">12h</p>
-                <p className="text-gray-600 text-sm">Duration</p>
               </div>
             </div>
 

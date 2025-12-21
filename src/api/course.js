@@ -282,6 +282,31 @@ const courseApi = {
       console.error('❌ getAllPublishedCourses error:', error.response?.data || error.message);
       throw error;
     }
+  },
+
+  // ✅ Get number of enrolled students for a course
+  getEnrolledCount: async (courseId) => {
+    try {
+      console.log('=== getEnrolledCount START ===');
+      console.log('courseId:', courseId);
+
+      const response = await axios.get(
+        `${BASE_URL}/courses/enrolledCount/${courseId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      console.log('=== getEnrolledCount SUCCESS ===');
+      console.log('Response data:', response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ getEnrolledCount error:', error.response?.data || error.message);
+      throw error;
+    }
   }
 };
 

@@ -268,7 +268,7 @@ export default function MyReports() {
           </button>
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur">
-              <FaFlag size={28} />
+              <FaFlag size={28} className="text-teal-600" />
             </div>
             <div>
               <h1 className="text-4xl font-bold">

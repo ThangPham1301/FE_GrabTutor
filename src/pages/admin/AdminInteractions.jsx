@@ -164,20 +164,20 @@ export default function AdminInteractions() {
       // Calculate stats from reports
       const totalReports = reports.length;
       const pendingReports = reports.filter(
-        (r) => r.status === 'PENDING' || !r.status
+        (r) => r.reportStatus === 'PENDING' || !r.reportStatus
       ).length;
-      const resolvedReports = reports.filter(
-        (r) => r.status?.includes('RESOLVED')
+      const acceptedReports = reports.filter(
+        (r) => r.reportStatus === 'ACCEPTED'
       ).length;
-      const reviewedReports = reports.filter(
-        (r) => r.status === 'REVIEWED'
+      const rejectedReports = reports.filter(
+        (r) => r.reportStatus === 'REJECTED'
       ).length;
 
       setReportStats({
         total: totalReports,
         pending: pendingReports,
-        resolved: resolvedReports,
-        reviewed: reviewedReports,
+        accepted: acceptedReports,
+        rejected: rejectedReports,
       });
     } catch (err) {
       console.error('❌ Error calculating stats:', err);
@@ -226,10 +226,8 @@ export default function AdminInteractions() {
   const getStatusColor = (status) => {
     const colors = {
       PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      REVIEWED: 'bg-blue-100 text-blue-800 border-blue-300',
-      RESOLVED_NORMAL: 'bg-green-100 text-green-800 border-green-300',
-      RESOLVED_REFUND: 'bg-green-100 text-green-800 border-green-300',
-      RESOLVED: 'bg-green-100 text-green-800 border-green-300',
+      ACCEPTED: 'bg-green-100 text-green-800 border-green-300',
+      REJECTED: 'bg-red-100 text-red-800 border-red-300',
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-300';
   };
@@ -238,10 +236,8 @@ export default function AdminInteractions() {
   const getStatusBadgeText = (status) => {
     const badges = {
       PENDING: '⏳ Pending',
-      REVIEWED: '👁️ Under Review',
-      RESOLVED_NORMAL: '✅ Resolved (Normal)',
-      RESOLVED_REFUND: '✅ Resolved (Refund)',
-      RESOLVED: '✅ Resolved',
+      ACCEPTED: '✅ Accepted',
+      REJECTED: '❌ Rejected',
     };
     return badges[status] || status || 'Pending';
   };
@@ -279,7 +275,7 @@ export default function AdminInteractions() {
 
     // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter((report) => report.status === statusFilter);
+      filtered = filtered.filter((report) => report.reportStatus === statusFilter);
     }
 
     setFilteredReports(filtered);
@@ -300,13 +296,13 @@ export default function AdminInteractions() {
           fill: '#f59e0b',
         },
         {
-          name: 'Under Review',
-          value: reportStats.reviewed || 0,
-          fill: '#3b82f6',
+          name: 'Rejected',
+          value: reportStats.rejected || 0,
+          fill: '#ef4444',
         },
         {
-          name: 'Resolved',
-          value: reportStats.resolved || 0,
+          name: 'Accepted',
+          value: reportStats.accepted || 0,
           fill: '#10b981',
         },
       ]
@@ -319,13 +315,13 @@ export default function AdminInteractions() {
       fill: '#f59e0b',
     },
     {
-      name: 'Under Review',
-      value: reportStats?.reviewed || 0,
-      fill: '#3b82f6',
+      name: 'Rejected',
+      value: reportStats?.rejected || 0,
+      fill: '#ef4444',
     },
     {
-      name: 'Resolved',
-      value: reportStats?.resolved || 0,
+      name: 'Accepted',
+      value: reportStats?.accepted || 0,
       fill: '#10b981',
     },
   ].filter((d) => d.value > 0);
@@ -428,31 +424,31 @@ export default function AdminInteractions() {
             </div>
 
             {/* Reviewed Reports */}
-            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-600 font-semibold text-sm">
-                  Under Review
+                  Rejected
                 </h3>
-                <FaChartBar className="text-blue-500 text-2xl" />
+                <FaExclamationTriangle className="text-red-500 text-2xl" />
               </div>
-              <p className="text-3xl font-bold text-blue-600">
-                {reportStats.reviewed || 0}
+              <p className="text-3xl font-bold text-red-600">
+                {reportStats.rejected || 0}
               </p>
-              <p className="text-xs text-gray-500 mt-2">Being processed</p>
+              <p className="text-xs text-gray-500 mt-2">Rejected reports</p>
             </div>
 
             {/* Resolved Reports */}
             <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-600 font-semibold text-sm">
-                  Resolved
+                  Accepted
                 </h3>
                 <FaCheckCircle className="text-green-500 text-2xl" />
               </div>
               <p className="text-3xl font-bold text-green-600">
-                {reportStats.resolved || 0}
+                {reportStats.accepted || 0}
               </p>
-              <p className="text-xs text-gray-500 mt-2">Completed</p>
+              <p className="text-xs text-gray-500 mt-2">Accepted reports</p>
             </div>
           </div>
         )}
@@ -569,8 +565,8 @@ export default function AdminInteractions() {
               >
                 <option value="all">All Status</option>
                 <option value="PENDING">Pending</option>
-                <option value="REVIEWED">Under Review</option>
-                <option value="RESOLVED">Resolved</option>
+                <option value="ACCEPTED">Accepted</option>
+                <option value="REJECTED">Rejected</option>
               </select>
             </div>
           </div>
@@ -688,10 +684,10 @@ export default function AdminInteractions() {
                       <div>
                         <span
                           className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                            report.status
+                            report.reportStatus
                           )}`}
                         >
-                          {getStatusBadgeText(report.status)}
+                          {getStatusBadgeText(report.reportStatus)}
                         </span>
                       </div>
 

@@ -40,6 +40,11 @@ export default function Navbar() {
 
   // ✅ NEW - Add state for unaccepted bids count
   const [unacceptedBidsCount, setUnacceptedBidsCount] = useState(0);
+  const [bidsViewed, setBidsViewed] = useState(() => {
+    // Load from localStorage on mount
+    const stored = localStorage.getItem('bidsViewed');
+    return stored === 'true';
+  });
 
   // ==================== HELPERS ====================
 
@@ -83,6 +88,9 @@ export default function Navbar() {
       }
 
       let unacceptedCount = 0;
+      let hasNewBid = false;
+      const now = Date.now();
+
       for (const post of posts) {
         const bidsResponse = await postApi.getTutorBidsForPost(post.id);
         let bids = [];
@@ -93,10 +101,28 @@ export default function Navbar() {
           bids = bidsResponse.data.items;
         }
 
-        unacceptedCount += bids.filter(b => b.status !== 'ACCEPTED').length;
+        const unacceptedBids = bids.filter(b => b.status !== 'ACCEPTED');
+        unacceptedCount += unacceptedBids.length;
+
+        // ✅ Check if there's any new bid (created within last 2 minutes)
+        unacceptedBids.forEach(bid => {
+          if (bid.createdAt) {
+            const createdAt = new Date(bid.createdAt);
+            const minutesAgo = Math.floor((now - createdAt.getTime()) / 60000);
+            if (minutesAgo < 2) {
+              hasNewBid = true;
+            }
+          }
+        });
       }
 
       setUnacceptedBidsCount(unacceptedCount);
+
+      // ✅ If new bid detected, reset bidsViewed to false and show badge
+      if (hasNewBid && bidsViewed) {
+        setBidsViewed(false);
+        localStorage.setItem('bidsViewed', 'false');
+      }
     } catch (error) {
       console.error('Error fetching unaccepted bids count:', error);
       setUnacceptedBidsCount(0);
@@ -106,25 +132,25 @@ export default function Navbar() {
   // ==================== ADMIN NAVBAR ====================
   if (user && user.role === 'ADMIN') {
     return (
-      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <nav className="bg-white shadow-lg border-b-2 border-[#03ccba] sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             
             {/* Logo */}
-            <Link to="/admin/dashboard" className="flex items-center gap-2 font-bold text-2xl text-[#03ccba]">
+            <Link to="/admin/dashboard" className="flex items-center gap-2 font-bold text-2xl bg-gradient-to-r from-[#03ccba] to-[#02b5a5] bg-clip-text text-transparent hover:opacity-80 transition-opacity">
               🎓 GrabTutor Admin
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-3">
               
               {/* Dashboard Button */}
               <button
                 onClick={() => navigate('/admin/dashboard')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
                   location.pathname === '/admin/dashboard'
-                    ? 'bg-[#03ccba] text-white shadow-md'
-                    : 'text-gray-700 hover:text-[#03ccba] hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white shadow-lg hover:shadow-xl'
+                    : 'text-gray-700 hover:text-[#03ccba] hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50'
                 }`}
               >
                 <FaHome size={18} />
@@ -138,45 +164,45 @@ export default function Navbar() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
-                    isDropdownOpen ? 'bg-gray-100' : 'hover:bg-gray-50'
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 ${
+                    isDropdownOpen ? 'bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-[#03ccba]' : 'hover:bg-gray-50 border-2 border-transparent'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-full font-bold text-white flex items-center justify-center ${getAvatarColor()}`}>
+                  <div className={`w-10 h-10 rounded-full font-bold text-white flex items-center justify-center shadow-md ${getAvatarColor()}`}>
                     {getAvatarInitials()}
                   </div>
-                  <FaChevronDown size={12} className="text-gray-600" />
+                  <FaChevronDown size={12} className={`text-gray-600 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border-2 border-[#03ccba] overflow-hidden z-50 animate-in fade-in duration-200">
                     
                     {/* User Info Header */}
-                    <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-full font-bold text-white flex items-center justify-center ${getAvatarColor()}`}>
+                    <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-6 border-b-2 border-teal-400">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 rounded-full font-bold text-white flex items-center justify-center shadow-lg text-lg ${getAvatarColor()}`}>
                           {getAvatarInitials()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm truncate">{user.fullName || user.email}</p>
                           <p className="text-xs text-teal-100 truncate">{user.email}</p>
-                          <p className="text-xs text-teal-100 mt-1">👤 {user.role}</p>
+                          <p className="text-xs text-teal-100 mt-2 inline-block bg-white bg-opacity-20 px-3 py-1 rounded-full">👤 {user.role}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Menu Items */}
-                    <div className="py-2">
+                    <div className="py-3">
                       {/* Profile */}
                       <button
                         onClick={() => {
                           navigate('/profile');
                           setIsDropdownOpen(false);
                         }}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                        className="w-full px-5 py-4 text-left hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 flex items-center gap-4 transition-all duration-200 border-l-4 border-transparent hover:border-[#03ccba]"
                       >
-                        <FaUser className="text-[#03ccba]" size={18} />
+                        <FaUser className="text-[#03ccba] text-lg flex-shrink-0" size={18} />
                         <div>
                           <p className="font-semibold text-sm text-gray-900">My Profile</p>
                           <p className="text-xs text-gray-500">View your profile</p>
@@ -189,23 +215,23 @@ export default function Navbar() {
                           navigate('/change-password');
                           setIsDropdownOpen(false);
                         }}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                        className="w-full px-5 py-4 text-left hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 flex items-center gap-4 transition-all duration-200 border-l-4 border-transparent hover:border-purple-600"
                       >
-                        <FaKey className="text-purple-600" size={18} />
+                        <FaKey className="text-purple-600 text-lg flex-shrink-0" size={18} />
                         <div>
                           <p className="font-semibold text-sm text-gray-900">Change Password</p>
                           <p className="text-xs text-gray-500">Update your password</p>
                         </div>
                       </button>
 
-                      <hr className="my-2" />
+                      <hr className="my-2 border-gray-100" />
 
                       {/* Logout */}
                       <button
                         onClick={handleLogout}
-                        className="w-full px-4 py-3 text-left hover:bg-red-50 flex items-center gap-3 transition-colors"
+                        className="w-full px-5 py-4 text-left hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 flex items-center gap-4 transition-all duration-200 border-l-4 border-transparent hover:border-red-600"
                       >
-                        <FaSignOutAlt className="text-red-600" size={18} />
+                        <FaSignOutAlt className="text-red-600 text-lg flex-shrink-0" size={18} />
                         <div>
                           <p className="font-semibold text-sm text-gray-900">Logout</p>
                           <p className="text-xs text-gray-500">Sign out of account</p>
@@ -220,28 +246,28 @@ export default function Navbar() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-gray-700 hover:text-[#03ccba] transition-colors"
+              className="md:hidden text-gray-700 hover:text-[#03ccba] hover:bg-teal-50 rounded-lg p-2 transition-all duration-300"
             >
-              {isMobileMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+              {isMobileMenuOpen ? <FaTimes size={24} className="text-red-600" /> : <FaBars size={24} />}
             </button>
           </div>
 
           {/* Mobile Navigation */}
           {isMobileMenuOpen && (
-            <div className="md:hidden mt-4 pb-4 space-y-2 border-t pt-4">
+            <div className="md:hidden mt-4 pb-4 space-y-2 border-t-2 border-[#03ccba] pt-4 bg-gradient-to-b from-white to-teal-50 rounded-lg">
               {/* Dashboard */}
               <button
                 onClick={() => {
                   navigate('/admin/dashboard');
                   setIsMobileMenuOpen(false);
                 }}
-                className="block w-full text-left px-4 py-2 text-gray-700 hover:text-[#03ccba] transition-colors font-semibold"
+                className="block w-full text-left px-4 py-3 text-gray-700 hover:text-[#03ccba] hover:bg-teal-100 transition-all duration-200 font-semibold rounded-lg"
               >
                 📊 Dashboard
               </button>
 
               {/* Divider */}
-              <hr className="my-2" />
+              <hr className="my-2 border-gray-200" />
 
               {/* Profile */}
               <button
@@ -281,26 +307,26 @@ export default function Navbar() {
 
   // ==================== STUDENT/TUTOR NAVBAR ====================
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 py-4">
+    <nav className="bg-white shadow-lg border-b-2 border-[#03ccba] sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-2xl text-[#03ccba]">
+          <Link to="/" className="flex items-center gap-2 font-bold text-2xl bg-gradient-to-r from-[#03ccba] to-[#02b5a5] bg-clip-text text-transparent hover:opacity-80 transition-opacity">
             🎓 GrabTutor
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             
             {/* Home */}
-            <Link to="/" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors">
+            <Link to="/" className="px-3 py-2 text-gray-700 hover:text-[#03ccba] hover:bg-teal-50 rounded-lg font-medium transition-all duration-300">
               Home
             </Link>
 
             {/* Browse Posts - TUTOR ONLY */}
             {user && user.role === 'TUTOR' && (
-              <Link to="/posts" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors flex items-center gap-2">
+              <Link to="/posts" className="px-3 py-2 text-gray-700 hover:text-[#03ccba] hover:bg-teal-50 rounded-lg font-medium transition-all duration-300 flex items-center gap-2">
                 <FaBook size={18} />
                 Browse Questions
               </Link>
@@ -308,27 +334,31 @@ export default function Navbar() {
 
             {/* Browse Posts - STUDENT ONLY */}
             {user && user.role === 'USER' && (
-              <Link to="/posts" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors">
+              <Link to="/posts" className="px-3 py-2 text-gray-700 hover:text-[#03ccba] hover:bg-teal-50 rounded-lg font-medium transition-all duration-300">
                 Browse Posts
               </Link>
             )}
 
             {/* Browse Courses */}
-            <Link to="/courses" className="text-gray-700 hover:text-[#03ccba] font-medium transition-colors">
+            <Link to="/courses" className="px-3 py-2 text-gray-700 hover:text-[#03ccba] hover:bg-teal-50 rounded-lg font-medium transition-all duration-300">
               Browse Courses
             </Link>
 
             {/* ✅ MY BIDS RECEIVED - Student Only with Badge */}
             {user && user.role === 'USER' && (
               <Link 
-                to="/posts/my-received-bids" 
+                to="/posts/my-received-bids"
+                onClick={() => {
+                  setBidsViewed(true);
+                  localStorage.setItem('bidsViewed', 'true');
+                }}
                 className="relative flex items-center gap-2 text-gray-700 hover:text-[#03ccba] font-medium transition-colors"
               >
                 <FaBook size={18} />
                 <span>My Bids</span>
                 
                 {/* Badge - show unaccepted bids count */}  
-                {unacceptedBidsCount > 0 && (
+                {unacceptedBidsCount > 0 && !bidsViewed && (
                   <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
                     {unacceptedBidsCount}
                   </span>

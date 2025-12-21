@@ -15,6 +15,12 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
   const [postTitles, setPostTitles] = useState({});
   const [deletingId, setDeletingId] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
+  const [newRoomIds, setNewRoomIds] = useState(new Set());
+  const [viewedNewRooms, setViewedNewRooms] = useState(() => {
+    // Load viewed new rooms from localStorage on mount
+    const stored = localStorage.getItem('viewedNewRooms');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  });
 
   // ✅ BỎ: Polling interval - chỉ fetch 1 lần khi mount
   // WebSocket sẽ update thay đổi real-time
@@ -45,6 +51,21 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
         items = Array.isArray(response.data) ? response.data : [];
       }
 
+      // ✅ Mark newly created rooms (created within last 2 minutes)
+      // But only if they haven't been viewed before
+      const newRooms = new Set();
+      items.forEach(conv => {
+        if (conv.createdAt && !viewedNewRooms.has(conv.id)) {
+          const createdAt = new Date(conv.createdAt);
+          const minutesAgo = Math.floor((now - createdAt.getTime()) / 60000);
+          if (minutesAgo < 2) {
+            newRooms.add(conv.id);
+            if (DEBUG) console.log('✨ New room detected:', conv.id);
+          }
+        }
+      });
+      setNewRoomIds(newRooms);
+
       setConversations(items);
       setLastFetchTime(now);
       
@@ -64,12 +85,12 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
         try {
           const postResponse = await postApi.getPostById(conv.postId);
           const post = postResponse.data?.data || postResponse.data;
-          titles[conv.postId] = post?.title || 'Unknown Post';
+          titles[conv.postId] = post?.title || 'Post';
           
           if (DEBUG) console.log(`📝 Post ${conv.postId}: ${titles[conv.postId]}`);
         } catch (err) {
           // Silently handle 404 post not found errors (post may have been deleted)
-          titles[conv.postId] = 'Unknown Post';
+          titles[conv.postId] = 'Post';
         }
       }
     }
@@ -147,6 +168,33 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // ✅ Check if room is newly created (within last 2 minutes)
+  const isNewRoom = (conv) => {
+    if (!newRoomIds.has(conv.id)) return false;
+    const createdAt = new Date(conv.createdAt);
+    const now = new Date();
+    const minutesAgo = Math.floor((now - createdAt) / 60000);
+    return minutesAgo < 2;
+  };
+
+  // ✅ Handle room selection - mark as not new and save to localStorage
+  const handleSelectConversation = (conv) => {
+    onSelectConversation(conv);
+    // Remove from new rooms set
+    setNewRoomIds(prev => {
+      const updated = new Set(prev);
+      updated.delete(conv.id);
+      return updated;
+    });
+    // Add to viewed new rooms and save to localStorage
+    setViewedNewRooms(prev => {
+      const updated = new Set(prev);
+      updated.add(conv.id);
+      localStorage.setItem('viewedNewRooms', JSON.stringify(Array.from(updated)));
+      return updated;
+    });
+  };
+
   return (
     <div className="w-full h-full bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col shadow-sm">
       
@@ -155,7 +203,7 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-              <FaComments size={20} />
+              <FaComments size={20} className="text-teal-600" />
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-bold">Messages</h2>
@@ -169,7 +217,7 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
             className="p-2 md:p-3 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-all duration-300 transform hover:scale-110 backdrop-blur-sm flex-shrink-0"
             title="Start new conversation"
           >
-            <FaPlus size={16} />
+            <FaPlus size={16} className="text-teal-600" />
           </button>
         </div>
 
@@ -215,19 +263,22 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
             </p>
           </div>
         ) : (
-          <div className="p-3 space-y-2">
+          <div className="p-3 space-y-2 max-h-[600px] overflow-y-auto">
             {filteredConversations.map(conv => {
               const roomName = getRoomName(conv);
               const isSelected = selectedConversation?.id === conv.id;
+              const isNew = isNewRoom(conv);
               
               return (
                 <div
                   key={conv.id}
                   onMouseEnter={() => setHoveredId(conv.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => onSelectConversation(conv)}
+                  onClick={() => handleSelectConversation(conv)}
                   className={`group relative rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden
-                    ${isSelected 
+                    ${isNew && !isSelected
+                      ? 'bg-gradient-to-r from-amber-50 to-yellow-50 ring-2 ring-amber-300 ring-opacity-60 shadow-md'
+                      : isSelected 
                       ? 'bg-white shadow-lg ring-2 ring-[#03ccba] ring-opacity-50' 
                       : 'bg-white hover:shadow-md hover:bg-gradient-to-r hover:from-white hover:to-teal-50'
                     }
@@ -248,14 +299,14 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        {/* Title & ID */}
-                        <div className="flex items-start justify-between gap-2 mb-1">
+                        {/* Title with NEW badge */}
+                        <div className="flex items-center gap-2 mb-1">
                           <h3 className={`text-sm md:text-base font-bold truncate line-clamp-1 md:line-clamp-2 ${isSelected ? 'text-[#03ccba]' : 'text-gray-900'}`}>
                             {roomName}
                           </h3>
-                          {conv.postId && (
-                            <span className="text-xs text-gray-400 whitespace-nowrap ml-1 font-mono flex-shrink-0">
-                              {conv.postId.slice(0, 6)}...
+                          {isNew && (
+                            <span className="px-2 py-0.5 bg-amber-400 text-amber-900 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 animate-pulse">
+                              NEW
                             </span>
                           )}
                         </div>
@@ -278,25 +329,7 @@ export default function ChatSidebar({ selectedConversation, onSelectConversation
                         </div>
                       </div>
 
-                      {/* Delete Button */}
-                      <div className="flex flex-col gap-2 flex-shrink-0">
-                        <button
-                          onClick={(e) => handleDeleteConversation(conv.id, e)}
-                          disabled={deletingId === conv.id}
-                          className={`p-2 rounded-lg transition-all duration-200 ${
-                            hoveredId === conv.id || isSelected
-                              ? 'opacity-100 text-red-600 hover:bg-red-50'
-                              : 'opacity-0 text-gray-400'
-                          } disabled:opacity-50`}
-                          title="Delete conversation"
-                        >
-                          {deletingId === conv.id ? (
-                            <FaSpinner className="animate-spin" size={12} />
-                          ) : (
-                            <FaTrash size={12} />
-                          )}
-                        </button>
-                      </div>
+
                     </div>
 
                     {/* Selected Indicator */}

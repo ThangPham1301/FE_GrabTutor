@@ -310,7 +310,7 @@ export default function CreatePost() {
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-6">
               <div className="w-20 h-20 bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <FaBook className="text-5xl" />
+                <FaBook className="text-5xl text-teal-600" />
               </div>
               <div>
                 <h1 className="text-5xl md:text-6xl font-bold">Browse Questions</h1>

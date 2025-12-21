@@ -29,6 +29,7 @@ export default function MyReceivedBids() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all, pending, accepted
   const [myInfo, setMyInfo] = useState(null);
+  const [newBidIds, setNewBidIds] = useState(new Set());
 
   // Effects
   useEffect(() => {
@@ -109,6 +110,21 @@ export default function MyReceivedBids() {
       
       if (DEBUG) console.log('Bids loaded:', bidsData.length);
       
+      // ✅ Mark newly created bids (within last 2 minutes)
+      const newBids = new Set();
+      const now = Date.now();
+      bidsData.forEach(bid => {
+        if (bid.createdAt) {
+          const createdAt = new Date(bid.createdAt);
+          const minutesAgo = Math.floor((now - createdAt.getTime()) / 60000);
+          if (minutesAgo < 2) {
+            newBids.add(bid.id);
+            if (DEBUG) console.log('✨ New bid detected:', bid.id);
+          }
+        }
+      });
+      setNewBidIds(prev => new Set([...prev, ...newBids]));
+      
       setPostBids(prev => ({
         ...prev,
         [postId]: bidsData
@@ -168,38 +184,21 @@ export default function MyReceivedBids() {
         console.warn('⚠️ Failed to send student notification:', notifErr);
       }
 
-      // ✅ GET OR CREATE CONVERSATION + NAVIGATE
-      try {
-        const conversationData = await chatApi.getOrCreateConversation(postId, bidId);
-        const roomId = conversationData?.roomId || conversationData?.id;
-        
-        if (roomId) {
-          console.log('✅ Chatroom created/found:', roomId);
-          alert('✅ Bid accepted successfully! Opening chatroom...');
-          navigate(`/chat?roomId=${roomId}`);
-        } else {
-          alert('✅ Bid accepted successfully! Notifications sent.');
-          // Update bid status
-          setPostBids(prev => ({
-            ...prev,
-            [postId]: prev[postId].map(bid =>
-              bid.id === bidId ? { ...bid, status: 'ACCEPTED' } : bid
-            )
-          }));
-          await fetchBidsForPost(postId);
-        }
-      } catch (chatErr) {
-        console.warn('⚠️ Failed to get/create conversation:', chatErr);
-        alert('✅ Bid accepted successfully! Notifications sent.');
-        // Update bid status
-        setPostBids(prev => ({
-          ...prev,
-          [postId]: prev[postId].map(bid =>
-            bid.id === bidId ? { ...bid, status: 'ACCEPTED' } : bid
-          )
-        }));
-        await fetchBidsForPost(postId);
-      }
+      // ✅ Accept bid successfully + Update bid status
+      if (DEBUG) console.log('📝 Updating bid status to ACCEPTED');
+      setPostBids(prev => ({
+        ...prev,
+        [postId]: prev[postId].map(bid =>
+          bid.id === bidId ? { ...bid, status: 'ACCEPTED' } : bid
+        )
+      }));
+
+      alert('✅ Bid accepted successfully!');
+      
+      // ✅ Navigate to ChatPage
+      if (DEBUG) console.log('📱 Navigating to ChatPage');
+      navigate('/chat');
+      
     } catch (err) {
       console.error('Error accepting bid:', err);
       alert('❌ Error: ' + (err.response?.data?.message || err.message));
@@ -329,26 +328,6 @@ export default function MyReceivedBids() {
               <p className="text-lg text-teal-100">Review tutor bids for your questions</p>
             </div>
           </div>
-
-          {/* Stats */}
-          <div className="flex gap-6 flex-wrap">
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm font-semibold">Total Posts</p>
-              <p className="text-3xl font-bold">{posts.length}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm font-semibold">Total Bids</p>
-              <p className="text-3xl font-bold">{getTotalBids()}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm font-semibold">Accepted</p>
-              <p className="text-3xl font-bold text-green-300">{getAcceptedBids()}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm font-semibold">Pending</p>
-              <p className="text-3xl font-bold text-yellow-300">{getPendingBids()}</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -418,8 +397,16 @@ export default function MyReceivedBids() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredPosts.map(post => (
-              <div key={post.id} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow">
+            {filteredPosts.map(post => {
+              // ✅ Check if post has any new bids
+              const postHasNewBids = postBids[post.id]?.some(bid => newBidIds.has(bid.id)) ?? false;
+              
+              return (
+              <div key={post.id} className={`rounded-2xl shadow-lg overflow-hidden border transition-all ${
+                postHasNewBids 
+                  ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-amber-300 ring-2 ring-amber-300 ring-opacity-60' 
+                  : 'bg-white border-gray-100 hover:shadow-xl'
+              }`}>
                 {/* Post Header - Expandable */}
                 <button
                   onClick={() => fetchBidsForPost(post.id)}
@@ -486,12 +473,27 @@ export default function MyReceivedBids() {
                       postBids[post.id].map(bid => {
                         const isAccepted = bid.status === 'ACCEPTED';
                         const isProcessing = processingBid === bid.id;
+                        const isNew = newBidIds.has(bid.id);
+                        const createdAt = new Date(bid.createdAt);
+                        const now = new Date();
+                        const minutesAgo = Math.floor((now - createdAt) / 60000);
+                        const isNewBid = minutesAgo < 2;
 
                         return (
                           <div 
                             key={bid.id} 
-                            className={`p-6 hover:bg-gray-100 transition-colors ${isAccepted ? 'bg-green-50' : ''}`}
+                            className={`p-6 hover:bg-gray-100 transition-colors relative ${
+                              isAccepted ? 'bg-green-50' : isNewBid ? 'bg-yellow-50 ring-l-4 ring-yellow-400' : ''
+                            }`}
                           >
+                            {/* NEW Badge */}
+                            {isNewBid && (
+                              <div className="absolute top-3 right-3">
+                                <span className="px-2.5 py-1 bg-yellow-400 text-yellow-900 rounded-full text-xs font-bold animate-pulse">
+                                  NEW
+                                </span>
+                              </div>
+                            )}
                             {/* Bid Header */}
                             <div className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-gray-200">
                               <div className="flex-1 min-w-0">
@@ -570,7 +572,7 @@ export default function MyReceivedBids() {
 
                             {/* Actions */}
                             <div className="flex gap-3">
-                              {!isAccepted ? (
+                              {bid.status === 'PENDING' ? (
                                 <>
                                   <button
                                     onClick={() => handleAcceptBid(post.id, bid.id)}
@@ -607,13 +609,19 @@ export default function MyReceivedBids() {
                                     )}
                                   </button>
                                 </>
-                              ) : (
+                              ) : bid.status === 'ACCEPTED' ? (
                                 <div className="w-full px-4 py-3 bg-green-50 border-2 border-green-500 rounded-lg text-center">
                                   <p className="text-green-700 font-bold flex items-center justify-center gap-2">
                                     <FaCheckCircle /> Accepted ✅
                                   </p>
                                 </div>
-                              )}
+                              ) : bid.status === 'REJECTED' ? (
+                                <div className="w-full px-4 py-3 bg-red-50 border-2 border-red-400 rounded-lg text-center">
+                                  <p className="text-red-700 font-bold flex items-center justify-center gap-2">
+                                    <FaTimes /> Rejected ❌
+                                  </p>
+                                </div>
+                              ) : null}
                               <button
                                 onClick={() => handleViewPost(post.id)}
                                 className="px-4 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-bold"
@@ -641,7 +649,8 @@ export default function MyReceivedBids() {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

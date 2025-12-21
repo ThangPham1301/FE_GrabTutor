@@ -112,8 +112,8 @@ export default function RechargeOptions() {
       
       console.log('Processing recharge:', amount);
       
-      if (amount < 50000) {
-        setError('Minimum recharge amount is 50,000 VNĐ');
+      if (amount <= 0) {
+        setError('Amount must be greater than 0');
         setLoading(false);
         return;
       }
@@ -229,18 +229,30 @@ export default function RechargeOptions() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="max-w-7xl mx-auto px-4">
         
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button
-            onClick={() => navigate('/posts')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-          >
-            <FaArrowLeft /> Back
-          </button>
-          <h1 className="text-3xl font-bold">💰 Recharge Wallet</h1>
+        <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] rounded-2xl shadow-xl p-8 mb-8 text-white">
+          <div className="flex justify-between items-start">
+            <div className="flex items-start gap-6">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+                <FaWallet className="text-4xl text-teal-600" />
+              </div>
+              <div>
+                <h1 className="text-5xl font-bold mb-2">Recharge Wallet</h1>
+                <p className="text-teal-100 text-lg">Add funds to your account and start learning</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/posts')}
+              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+            >
+              <FaArrowLeft size={24} />
+            </button>
+          </div>
         </div>
+
+        <div className="py-12">
 
         {/* Error Message */}
         {error && (
@@ -259,7 +271,7 @@ export default function RechargeOptions() {
             onClick={() => { setActiveTab('recharge'); setPageNo(0); }}
             className={`pb-4 px-4 font-bold text-lg transition-colors border-b-2 ${
               activeTab === 'recharge'
-                ? 'text-blue-600 border-blue-600'
+                ? 'text-teal-600 border-teal-600'
                 : 'text-gray-600 border-transparent hover:text-gray-900'
             }`}
           >
@@ -270,7 +282,7 @@ export default function RechargeOptions() {
             onClick={() => { setActiveTab('transactions'); setPageNo(0); }}
             className={`pb-4 px-4 font-bold text-lg transition-colors border-b-2 ${
               activeTab === 'transactions'
-                ? 'text-blue-600 border-blue-600'
+                ? 'text-teal-600 border-teal-600'
                 : 'text-gray-600 border-transparent hover:text-gray-900'
             }`}
           >
@@ -283,27 +295,16 @@ export default function RechargeOptions() {
         {activeTab === 'recharge' && (
           <div className="space-y-8">
             {/* Balance Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Balance</h2>
-              
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-8 border-2 border-blue-200">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full flex items-center justify-center">
-                    <FaWallet className="text-white text-2xl" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-sm font-semibold mb-1">Available Balance</p>
-                    {loadingBalance ? (
-                      <div className="animate-pulse h-8 bg-gray-300 rounded w-32"></div>
-                    ) : (
-                      <p className="text-4xl font-bold text-blue-600">
-                        {balance?.toLocaleString('vi-VN')}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">VNĐ</p>
-                  </div>
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl shadow-lg p-8 mb-8 border-2 border-teal-200">
+              <p className="text-teal-700 text-sm font-semibold mb-2">Available Balance</p>
+              {loadingBalance ? (
+                <div className="animate-pulse h-12 bg-gray-300 rounded w-40"></div>
+              ) : (
+                <div className="flex items-baseline gap-3">
+                  <p className="text-5xl font-bold text-teal-600">{balance?.toLocaleString('vi-VN')}</p>
+                  <p className="text-xl text-teal-600 font-semibold">VNĐ</p>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Recharge Form */}
@@ -315,7 +316,7 @@ export default function RechargeOptions() {
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
                   Amount (VNĐ)
                 </label>
-                <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex flex-col md:flex-row gap-4 items-center">
                   <div className="flex-1">
                     <input
                       type="number"
@@ -324,23 +325,19 @@ export default function RechargeOptions() {
                         setCustomAmount(e.target.value);
                         setError(null);
                       }}
-                      min="50000"
                       step="10000"
                       max="50000000"
-                      placeholder="Minimum 50,000 VNĐ"
-                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-2 focus:ring-blue-600 focus:ring-opacity-30 outline-none text-lg font-semibold"
+                      placeholder="Enter amount (VNĐ)"
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-teal-600 focus:ring-2 focus:ring-teal-600 focus:ring-opacity-30 outline-none text-lg font-semibold"
                       disabled={loading}
                     />
-                    <p className="text-xs text-gray-500 mt-2">
-                      From 50,000 to 50,000,000 VNĐ
-                    </p>
                   </div>
                   
                   {/* Recharge Button */}
                   <button
                     onClick={handleCustomAmount}
                     disabled={loading || !customAmount}
-                    className="px-10 py-4 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap h-16"
+                    className="px-10 py-4 bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap h-16"
                   >
                     {loading ? (
                       <>
@@ -358,14 +355,14 @@ export default function RechargeOptions() {
 
               {/* Quick Select */}
               <div className="border-t pt-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Select</h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Popular Packages</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {RECHARGE_OPTIONS.map((option) => (
                     <button
                       key={option.amount}
                       onClick={() => handleRecharge(option.amount)}
                       disabled={loading}
-                      className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all font-bold text-sm text-gray-900 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                      className="p-4 bg-gradient-to-br from-teal-50 to-cyan-50 border-2 border-teal-200 rounded-xl hover:border-teal-400 hover:from-teal-100 hover:to-cyan-100 transition-all font-bold text-sm text-teal-700 hover:text-teal-800 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 hover:shadow-md"
                     >
                       {option.label}
                     </button>
@@ -376,14 +373,14 @@ export default function RechargeOptions() {
 
             {/* Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-blue-50 rounded-2xl shadow-lg p-6 border-l-4 border-blue-400">
+              <div className="bg-teal-50 rounded-2xl shadow-lg p-6 border-l-4 border-teal-400">
                 <h3 className="text-lg font-bold text-gray-900 mb-3">🔒 Secure Payment</h3>
                 <p className="text-gray-700 text-sm">
                   All transactions are encrypted and protected by VNPay - Vietnam's leading payment gateway
                 </p>
               </div>
 
-              <div className="bg-green-50 rounded-2xl shadow-lg p-6 border-l-4 border-green-400">
+              <div className="bg-cyan-50 rounded-2xl shadow-lg p-6 border-l-4 border-cyan-400">
                 <h3 className="text-lg font-bold text-gray-900 mb-3">⚡ Instant Funding</h3>
                 <p className="text-gray-700 text-sm">
                   Money is credited instantly after successful payment. No hidden fees.
@@ -392,7 +389,7 @@ export default function RechargeOptions() {
             </div>
 
             {/* Test Card Info */}
-            <div className="bg-amber-50 rounded-2xl shadow-lg p-6 border-l-4 border-amber-400">
+            <div className="bg-teal-50 rounded-2xl shadow-lg p-6 border-l-4 border-teal-400">
               <h3 className="text-lg font-bold text-gray-900 mb-4">💳 Test Card Info</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-lg p-3">
@@ -412,7 +409,7 @@ export default function RechargeOptions() {
                   <p className="text-sm font-bold text-gray-900">{TEST_CARD.expiry} / {TEST_CARD.otp}</p>
                 </div>
               </div>
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-xs text-yellow-800 mt-4">
+              <div className="bg-teal-100 border-l-4 border-teal-400 p-3 rounded text-xs text-teal-800 mt-4">
                 <p className="font-semibold mb-1">📌 Testing Only</p>
                 <p>Won't charge real account</p>
               </div>
@@ -427,7 +424,7 @@ export default function RechargeOptions() {
 
             {loadingTransactions ? (
               <div className="flex justify-center py-16">
-                <FaSpinner className="animate-spin text-4xl text-blue-600" />
+                <FaSpinner className="animate-spin text-4xl text-teal-600" />
               </div>
             ) : transactions.length > 0 ? (
               <>
@@ -509,6 +506,7 @@ export default function RechargeOptions() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

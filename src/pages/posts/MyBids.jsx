@@ -117,20 +117,20 @@ export default function MyBids() {
           </div>
           
           {/* Stats */}
-          <div className="flex gap-6">
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm">Total Bids</p>
-              <p className="text-3xl font-bold">{bids.length}</p>
+          <div className="flex gap-6 flex-wrap">
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-lg px-4 py-3 border-2 border-teal-200">
+              <p className="text-teal-700 text-sm font-semibold">Total Bids</p>
+              <p className="text-3xl font-bold text-teal-600">{bids.length}</p>
             </div>
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm">Accepted</p>
-              <p className="text-3xl font-bold text-green-300">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg px-4 py-3 border-2 border-green-200">
+              <p className="text-green-700 text-sm font-semibold">Accepted</p>
+              <p className="text-3xl font-bold text-green-600">
                 {bids.filter(b => b.status === 'ACCEPTED').length}
               </p>
             </div>
-            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-3 backdrop-blur">
-              <p className="text-teal-100 text-sm">Pending</p>
-              <p className="text-3xl font-bold text-yellow-300">
+            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg px-4 py-3 border-2 border-yellow-200">
+              <p className="text-yellow-700 text-sm font-semibold">Pending</p>
+              <p className="text-3xl font-bold text-yellow-600">
                 {bids.filter(b => b.status === 'PENDING').length}
               </p>
             </div>
