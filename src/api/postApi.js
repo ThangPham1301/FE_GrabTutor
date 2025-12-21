@@ -378,6 +378,7 @@ const postApi = {
 
       const response = await axios.put(
         `${BASE_URL}/posts/tutorBid/${tutorBidId}`,
+        {},
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

@@ -187,29 +187,13 @@ export default function CreateCourse() {
               <label className="block text-sm font-bold text-gray-900 mb-2">
                 Course Thumbnail
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Upload Area */}
-                <div>
-                  <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-[#03ccba] hover:bg-teal-50 transition-all block">
-                    <FaUpload className="text-4xl text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-700 font-semibold mb-1">Upload Image</p>
-                    <p className="text-gray-600 text-sm">PNG, JPG up to 5MB</p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-
-                {/* Preview */}
-                {imagePreview && (
-                  <div className="relative">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-[#03ccba] hover:bg-gradient-to-br hover:from-teal-50 hover:to-cyan-50 transition-all">
+                {imagePreview ? (
+                  <div className="relative w-full">
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full max-h-48 object-contain rounded-lg shadow-lg mx-auto"
                     />
                     <button
                       type="button"
@@ -217,11 +201,23 @@ export default function CreateCourse() {
                         setImagePreview(null);
                         setFormData(prev => ({ ...prev, imageFile: null }));
                       }}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-lg transition-colors"
                     >
                       <FaTimes />
                     </button>
                   </div>
+                ) : (
+                  <label className="cursor-pointer text-center block">
+                    <FaUpload className="text-5xl text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-700 font-semibold mb-1">Click to upload image</p>
+                    <p className="text-gray-500 text-sm">or drag and drop</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
                 )}
               </div>
             </div>
