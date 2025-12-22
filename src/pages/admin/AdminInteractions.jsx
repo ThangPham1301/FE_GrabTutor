@@ -156,31 +156,23 @@ export default function AdminInteractions() {
     }
   };
 
-  // ✅ Fetch report statistics
+  // ✅ Fetch report statistics from API
   const fetchReportStats = async () => {
     try {
-      if (DEBUG) console.log('📊 Fetching report stats...');
+      if (DEBUG) console.log('📊 Fetching report stats from API...');
 
-      // Calculate stats from reports
-      const totalReports = reports.length;
-      const pendingReports = reports.filter(
-        (r) => r.reportStatus === 'PENDING' || !r.reportStatus
-      ).length;
-      const acceptedReports = reports.filter(
-        (r) => r.reportStatus === 'ACCEPTED'
-      ).length;
-      const rejectedReports = reports.filter(
-        (r) => r.reportStatus === 'REJECTED'
-      ).length;
+      const statsData = await reportApi.getReportStatusStats();
+      
+      if (DEBUG) console.log('📊 Report stats:', statsData);
 
       setReportStats({
-        total: totalReports,
-        pending: pendingReports,
-        accepted: acceptedReports,
-        rejected: rejectedReports,
+        total: statsData?.totalReports || 0,
+        pending: statsData?.pending || 0,
+        accepted: statsData?.accepted || 0,
+        rejected: statsData?.rejected || 0,
       });
     } catch (err) {
-      console.error('❌ Error calculating stats:', err);
+      console.error('❌ Error fetching stats:', err);
     }
   };
 

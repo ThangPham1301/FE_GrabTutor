@@ -170,117 +170,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ==================== QUICK STATS ==================== */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {/* Total Users */}
-          <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow border-l-4 border-blue-500">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">
-                Total Users
-              </h3>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FaUsers className="text-blue-600 text-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-4xl font-bold text-gray-900">
-                {userStats?.total || 0}
-              </p>
-              <p className="text-xs text-gray-500">All registered users on platform</p>
-            </div>
-          </div>
-
-          {/* Total Tutors */}
-          <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow border-l-4 border-green-500">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">
-                Total Tutors
-              </h3>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <FaChalkboardTeacher className="text-green-600 text-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-4xl font-bold text-gray-900">
-                {userStats?.tutor || 0}
-              </p>
-              <p className="text-xs text-gray-500">Verified educators</p>
-            </div>
-          </div>
-
-          {/* Total Students */}
-          <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow border-l-4 border-purple-500">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">
-                Total Students
-              </h3>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <FaUsers className="text-purple-600 text-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-4xl font-bold text-gray-900">
-                {userStats?.user || 0}
-              </p>
-              <p className="text-xs text-gray-500">Active learners</p>
-            </div>
-          </div>
-
-          {/* Total Posts */}
-          <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow border-l-4 border-orange-500">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">
-                Total Posts
-              </h3>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FaFileAlt className="text-orange-600 text-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-4xl font-bold text-gray-900">
-                {postStats?.total || 0}
-              </p>
-              <p className="text-xs text-gray-500">Questions posted</p>
-            </div>
-          </div>
-
-          {/* Open Posts */}
-          <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow border-l-4 border-yellow-500">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">
-                Open Posts
-              </h3>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <FaChartLine className="text-yellow-600 text-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-4xl font-bold text-gray-900">
-                {postStats?.open || 0}
-              </p>
-              <p className="text-xs text-gray-500">Seeking tutors</p>
-            </div>
-          </div>
-
-          {/* Resolved Issues */}
-          <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow border-l-4 border-green-600">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">
-                Resolved Posts
-              </h3>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <FaCheckCircle className="text-green-600 text-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-4xl font-bold text-gray-900">
-                {postStats?.closed || 0}
-              </p>
-              <p className="text-xs text-gray-500">Completed posts</p>
-            </div>
-          </div>
-        </div>
-
         {/* ==================== MANAGEMENT MENU ==================== */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
@@ -295,13 +184,14 @@ export default function AdminDashboard() {
                 <button
                   key={idx}
                   onClick={item.onClick}
-                  className={`${item.bgColor} ${item.borderColor} border-2 rounded-xl p-8 hover:shadow-xl hover:scale-105 transition-all duration-300 text-left group`}
+                  className={`bg-white border-l-4 rounded-xl p-8 hover:shadow-xl hover:scale-105 transition-all duration-300 text-left group shadow-md hover:border-l-8`}
+                  style={{ borderLeftColor: item.color.split(' ')[1] }}
                 >
                   {/* Icon */}
                   <div
-                    className={`w-16 h-16 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-6 text-white shadow-lg group-hover:shadow-xl transition-shadow`}
+                    className={`w-14 h-14 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-6 text-white shadow-lg group-hover:shadow-xl transition-shadow`}
                   >
-                    <Icon size={32} />
+                    <Icon size={28} />
                   </div>
 
                   {/* Content */}

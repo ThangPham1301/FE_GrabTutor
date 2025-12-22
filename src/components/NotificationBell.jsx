@@ -324,9 +324,29 @@ export default function NotificationBell() {
         setShowDropdown(false);
         break;
 
-      // ✅ Post notifications (navigate to post using refId)
-      case 'NOTIFICATION':
+      // ✅ NEW REPORT NOTIFICATIONS (Admin - Navigate to Report Detail)
+      case 'NEW REPORT!':
+        if (postId) {
+          if (DEBUG) console.log('🚩 Navigate to admin report detail:', postId);
+          navigate(`/admin/report/${postId}`);
+        } else {
+          if (DEBUG) console.log('🚩 No report ID found, navigate to admin interactions');
+          navigate('/admin/interactions');
+        }
+        setShowDropdown(false);
+        break;
+
+      // ✅ POST NOTIFICATIONS (Bid cancelled, offer updates - Navigate to Post Detail)
       default:
+        // ✅ Check if title contains "Post" (Bid notifications, Offer updates, etc.)
+        if (notification.title?.includes('Post') && postId) {
+          if (DEBUG) console.log('📄 Navigate to post detail from title:', postId);
+          navigate(`/posts/${postId}`);
+          setShowDropdown(false);
+          break;
+        }
+
+        // ✅ Generic notifications (navigate to post using refId)
         if (postId) {
           if (DEBUG) console.log('📄 Navigate to post detail:', postId);
           navigate(`/posts/${postId}`);

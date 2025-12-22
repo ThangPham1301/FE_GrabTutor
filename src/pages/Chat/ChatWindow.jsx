@@ -469,7 +469,8 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
 
       setNewMessage('');
       clearFile();
-      onRefresh?.();
+      // ✅ Removed onRefresh?.() - WebSocket will handle message addition automatically
+      // onRefresh?.();
 
     } catch (error) {
       console.error('Send message error:', error);
@@ -606,7 +607,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
 
   // ==================== RENDER ====================
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
       
       {/* ==================== HEADER ==================== */}
       <div className="bg-gradient-to-r from-[#03ccba] to-[#02b5a5] text-white p-4 md:p-5 flex items-center justify-between shadow-lg sticky top-0 z-10 flex-shrink-0">
@@ -790,7 +791,7 @@ export default function ChatWindow({ conversation, onClose, onRefresh }) {
       )}
 
       {/* ==================== MESSAGES ==================== */}
-      <div className="flex-1 overflow-y-auto px-2 md:px-3 py-2 md:py-3 space-y-2 flex flex-col-reverse min-h-0">
+      <div className="flex-1 overflow-y-auto px-2 md:px-3 py-2 md:py-3 space-y-2 flex flex-col min-h-0 max-h-[calc(100vh-400px)]">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">

@@ -191,6 +191,29 @@ const reportApi = {
       console.error('deleteReport error:', error.response?.data || error.message);
       throw error;
     }
+  },
+
+  // ✅ NEW - GET REPORT STATUS STATISTICS (Admin)
+  getReportStatusStats: async () => {
+    try {
+      console.log('=== getReportStatusStats START ===');
+      
+      const response = await axios.get(
+        `${BASE_URL}/statistic/report-status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      console.log('=== getReportStatusStats SUCCESS ===');
+      console.log('Response:', response.data);
+      return response.data?.data || response.data;
+    } catch (error) {
+      console.error('getReportStatusStats error:', error.response?.data || error.message);
+      throw error;
+    }
   }
 };
 
